@@ -22,5 +22,150 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Marquee Animations */
+@keyframes marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-100% - var(--gap)));
+  }
+}
+
+@keyframes marquee-vertical {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(calc(-100% - var(--gap)));
+  }
+}
+
+.animate-marquee {
+  animation: marquee var(--duration) linear infinite;
+}
+
+.animate-marquee-vertical {
+  animation: marquee-vertical var(--duration) linear infinite;
+}
+
+/* Scroll Animations */
+.scroll-animate {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+
+.scroll-animate.animate-in-view {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.scroll-fade-up {
+  transform: translateY(30px);
+}
+
+.scroll-fade-up.animate-in-view {
+  transform: translateY(0);
+}
+
+.scroll-fade-left {
+  transform: translateX(-30px);
+}
+
+.scroll-fade-left.animate-in-view {
+  transform: translateX(0);
+}
+
+.scroll-fade-right {
+  transform: translateX(30px);
+}
+
+.scroll-fade-right.animate-in-view {
+  transform: translateX(0);
+}
+
+.scroll-scale {
+  transform: scale(0.95);
+}
+
+.scroll-scale.animate-in-view {
+  transform: scale(1);
+}
+
+.scroll-blur {
+  filter: blur(5px);
+}
+
+.scroll-blur.animate-in-view {
+  filter: blur(0);
+}
+
+.scroll-rotate {
+  transform: rotate(-5deg);
+}
+
+.scroll-rotate.animate-in-view {
+  transform: rotate(0);
+}
+
+/* Stagger delays */
+.scroll-stagger-1 { transition-delay: 0.1s; }
+.scroll-stagger-2 { transition-delay: 0.2s; }
+.scroll-stagger-3 { transition-delay: 0.3s; }
+.scroll-stagger-4 { transition-delay: 0.4s; }
+.scroll-stagger-5 { transition-delay: 0.5s; }
+.scroll-stagger-6 { transition-delay: 0.6s; }
+
+/* Gradient animation */
+@keyframes gradient {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* Text reveal effect */
+.text-reveal {
+  background-size: 200% auto;
+  background-clip: text;
+}
+
+/* Scroll glow effect */
+.scroll-glow.animate-in-view {
+  text-shadow: 0 0 30px rgba(91, 111, 163, 0.5);
+}
+
+/* Magnetic button effect placeholder */
+.magnetic {
+  transition: transform 0.3s ease;
 }
