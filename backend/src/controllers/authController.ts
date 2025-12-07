@@ -1,11 +1,37 @@
 import { Request, Response, NextFunction } from 'express';
 import * as authService from '../services/authService.js';
-import { generateTokenPair, verifyRefreshToken, generateAccessToken, parseExpiresIn } from '../utils/token.js';
+import { generateAccessToken, getRefreshTokenMaxAge } from '../utils/token.js';
 import { BadRequestError, UnauthorizedError, ConflictError } from '../utils/errors.js';
 import { sendSuccess, sendCreated } from '../utils/response.js';
-import { env } from '../config/env.js';
-import type { AuthenticatedRequest, JwtPayload } from '../types/index.js';
+import type { AuthenticatedRequest, JwtPayload, DeviceInfo } from '../types/index.js';
 
+/**
+ * Extract device info from request headers
+ */
+function getDeviceInfo(req: Request): DeviceInfo {
+  return {
+    userAgent: req.headers['user-agent'],
+    ipAddress: req.ip || req.socket.remoteAddress,
+    deviceName: req.headers['x-device-name'] as string | undefined,
+  };
+}
+
+/**
+ * Get cookie options for refresh token
+ */
+function getRefreshCookieOptions() {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict' as const,
+    maxAge: getRefreshTokenMaxAge(),
+    path: '/',
+  };
+}
+
+/**
+ * Register a new user
+ */
 export async function register(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { email, password } = req.body;
@@ -14,8 +40,8 @@ export async function register(req: Request, res: Response, next: NextFunction):
       throw new BadRequestError('Email and password are required');
     }
 
-    if (password.length < 6) {
-      throw new BadRequestError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      throw new BadRequestError('Password must be at least 8 characters');
     }
 
     const existingUser = await authService.findUserByEmail(email);
@@ -26,19 +52,10 @@ export async function register(req: Request, res: Response, next: NextFunction):
     const user = await authService.createUser(email, password);
 
     const payload: JwtPayload = { userId: user.id, email: user.email };
-    const { accessToken, refreshToken } = generateTokenPair(payload);
+    const accessToken = generateAccessToken(payload);
+    const refreshToken = await authService.createRefreshToken(user.id, getDeviceInfo(req));
 
-    // Store refresh token in database
-    await authService.updateRefreshToken(user.id, refreshToken);
-
-    // Set refresh token as HTTP-only cookie
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: parseExpiresIn(env.JWT_REFRESH_EXPIRES_IN),
-      path: '/',
-    });
+    res.cookie('refreshToken', refreshToken, getRefreshCookieOptions());
 
     sendCreated(res, {
       accessToken,
@@ -49,6 +66,9 @@ export async function register(req: Request, res: Response, next: NextFunction):
   }
 }
 
+/**
+ * Login an existing user
+ */
 export async function login(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { email, password } = req.body;
@@ -68,19 +88,10 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
     }
 
     const payload: JwtPayload = { userId: user.id, email: user.email };
-    const { accessToken, refreshToken } = generateTokenPair(payload);
+    const accessToken = generateAccessToken(payload);
+    const refreshToken = await authService.createRefreshToken(user.id, getDeviceInfo(req));
 
-    // Store refresh token in database
-    await authService.updateRefreshToken(user.id, refreshToken);
-
-    // Set refresh token as HTTP-only cookie
-    res.cookie('refreshToken', refreshToken, {
-      httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: parseExpiresIn(env.JWT_REFRESH_EXPIRES_IN),
-      path: '/',
-    });
+    res.cookie('refreshToken', refreshToken, getRefreshCookieOptions());
 
     sendSuccess(res, {
       accessToken,
@@ -91,31 +102,34 @@ export async function login(req: Request, res: Response, next: NextFunction): Pr
   }
 }
 
+/**
+ * Refresh the access token using a valid refresh token
+ */
 export async function refresh(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const refreshToken = req.cookies?.refreshToken;
+    const oldRefreshToken = req.cookies?.refreshToken;
 
-    if (!refreshToken) {
+    if (!oldRefreshToken) {
       throw new UnauthorizedError('No refresh token provided');
     }
 
-    // Verify the refresh token
-    let decoded: JwtPayload;
-    try {
-      decoded = verifyRefreshToken(refreshToken);
-    } catch {
-      throw new UnauthorizedError('Invalid refresh token');
+    const tokenData = await authService.findRefreshToken(oldRefreshToken);
+    if (!tokenData) {
+      res.clearCookie('refreshToken', { path: '/' });
+      throw new UnauthorizedError('Invalid or expired refresh token');
     }
 
-    // Check if refresh token exists in database
-    const user = await authService.findUserByRefreshToken(refreshToken);
-    if (!user) {
-      throw new UnauthorizedError('Refresh token not found');
-    }
+    // Rotate refresh token
+    const newRefreshToken = await authService.rotateRefreshToken(
+      oldRefreshToken,
+      tokenData.user_id,
+      getDeviceInfo(req)
+    );
 
-    // Generate new access token
-    const payload: JwtPayload = { userId: user.id, email: user.email };
+    const payload: JwtPayload = { userId: tokenData.user_id, email: tokenData.user_email };
     const accessToken = generateAccessToken(payload);
+
+    res.cookie('refreshToken', newRefreshToken, getRefreshCookieOptions());
 
     sendSuccess(res, { accessToken });
   } catch (error) {
@@ -123,23 +137,21 @@ export async function refresh(req: Request, res: Response, next: NextFunction): 
   }
 }
 
+/**
+ * Logout the current session
+ */
 export async function logout(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const refreshToken = req.cookies?.refreshToken;
 
     if (refreshToken) {
-      // Find user and clear refresh token
-      const user = await authService.findUserByRefreshToken(refreshToken);
-      if (user) {
-        await authService.updateRefreshToken(user.id, null);
-      }
+      await authService.deleteRefreshToken(refreshToken);
     }
 
-    // Clear the cookie
     res.clearCookie('refreshToken', {
       httpOnly: true,
-      secure: env.NODE_ENV === 'production',
-      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
       path: '/',
     });
 
@@ -149,6 +161,33 @@ export async function logout(req: Request, res: Response, next: NextFunction): P
   }
 }
 
+/**
+ * Logout from all devices
+ */
+export async function logoutAll(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
+  try {
+    if (!req.user) {
+      throw new UnauthorizedError();
+    }
+
+    await authService.deleteAllUserRefreshTokens(req.user.userId);
+
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    });
+
+    sendSuccess(res, { message: 'Logged out from all devices' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+/**
+ * Request a password reset email
+ */
 export async function forgotPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { email } = req.body;
@@ -157,17 +196,16 @@ export async function forgotPassword(req: Request, res: Response, next: NextFunc
       throw new BadRequestError('Email is required');
     }
 
-    const resetToken = await authService.generateResetToken(email);
+    const resetToken = await authService.createResetToken(email);
 
     // Always return success to prevent email enumeration
     const response: { message: string; resetUrl?: string } = {
       message: 'If an account exists with this email, you will receive a password reset link.',
     };
 
-    // In development, include the reset URL for testing
-    if (env.NODE_ENV === 'development' && resetToken) {
-      response.resetUrl = `${env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`;
-      console.log('[PASSWORD_RESET] Reset URL:', response.resetUrl);
+    // Include reset URL in development for testing
+    if (process.env.NODE_ENV === 'development' && resetToken) {
+      response.resetUrl = `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`;
     }
 
     sendSuccess(res, response);
@@ -176,6 +214,9 @@ export async function forgotPassword(req: Request, res: Response, next: NextFunc
   }
 }
 
+/**
+ * Reset password using a valid reset token
+ */
 export async function resetPassword(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { token, password } = req.body;
@@ -184,8 +225,8 @@ export async function resetPassword(req: Request, res: Response, next: NextFunct
       throw new BadRequestError('Token and password are required');
     }
 
-    if (password.length < 6) {
-      throw new BadRequestError('Password must be at least 6 characters');
+    if (password.length < 8) {
+      throw new BadRequestError('Password must be at least 8 characters');
     }
 
     const success = await authService.resetPassword(token, password);
@@ -199,6 +240,9 @@ export async function resetPassword(req: Request, res: Response, next: NextFunct
   }
 }
 
+/**
+ * Get current authenticated user info
+ */
 export async function me(req: AuthenticatedRequest, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.user) {
@@ -218,4 +262,3 @@ export async function me(req: AuthenticatedRequest, res: Response, next: NextFun
     next(error);
   }
 }
-

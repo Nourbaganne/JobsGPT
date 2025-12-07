@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiError } from '../utils/errors.js';
-import { env } from '../config/env.js';
 
 export function errorHandler(
   err: Error,
@@ -9,7 +8,7 @@ export function errorHandler(
   next: NextFunction
 ): void {
   // Log error in development
-  if (env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development') {
     console.error('Error:', err);
   }
 
@@ -42,7 +41,7 @@ export function errorHandler(
   // Handle unknown errors
   res.status(500).json({
     success: false,
-    error: env.NODE_ENV === 'production' 
+    error: process.env.NODE_ENV === 'production' 
       ? 'Internal server error' 
       : err.message,
   });
@@ -55,4 +54,3 @@ export function notFoundHandler(req: Request, res: Response): void {
     error: `Route ${req.method} ${req.path} not found`,
   });
 }
-
