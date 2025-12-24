@@ -11,20 +11,6 @@ export interface User {
   email: string;
 }
 
-export interface UserPreferences {
-  resumeText: string | null;
-  keywords: string | null;
-  refreshHours: number;
-}
-
-export interface UserProfile {
-  id: number;
-  email: string;
-  hasResume: boolean;
-  keywords: string | null;
-  refreshHours: number;
-}
-
 // Job types
 export interface Job {
   id: number;
@@ -58,4 +44,3 @@ export interface AuthResponse {
 export interface RefreshResponse {
   accessToken: string;
 }
-

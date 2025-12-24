@@ -87,8 +87,8 @@ export default function LoginPage() {
                     {/* Testimonial */}
                     <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 border border-white/10">
                         <p className="text-white/90 italic leading-relaxed">
-                            "I was skeptical at first, but JobsGPT delivered beyond expectations. 
-                            The AI email generator helped me stand out to recruiters. Highly recommend!"
+                        &quot;I was skeptical at first, but JobsGPT delivered beyond expectations. 
+                            The AI email generator helped me stand out to recruiters. Highly recommend!&quot;
                         </p>
                         <div className="flex items-center gap-3 mt-4">
                                 <div className="w-10 h-10 rounded-full bg-[#5b6fa3]" />

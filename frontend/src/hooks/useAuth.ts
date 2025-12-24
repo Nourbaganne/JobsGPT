@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { api, setAccessToken, getAccessToken } from '@/lib/api';
+import { api } from '@/lib/api';
 import type { User } from '@/types';
 
 interface AuthState {

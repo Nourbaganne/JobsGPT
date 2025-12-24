@@ -8,7 +8,7 @@ export default function SettingsPage() {
                     Settings
                 </h1>
                 <p className="mt-3 text-base text-[#4a4e69] sm:text-lg">
-                    Manage your profile, preferences, and job search criteria.
+                    Manage your profile and resume.
                 </p>
             </div>
             <div className="scroll-animate scroll-fade-up scroll-stagger-1">

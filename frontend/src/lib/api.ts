@@ -1,4 +1,4 @@
-import type { ApiResponse, RefreshResponse } from '@/types';
+import type { ApiResponse, RefreshResponse, User, Job } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api';
 
@@ -92,7 +92,7 @@ async function refreshAccessToken(): Promise<boolean> {
 export const api = {
   // Auth
   async login(email: string, password: string) {
-    const response = await fetchWithAuth<{ accessToken: string; user: { id: number; email: string } }>(
+    const response = await fetchWithAuth<{ accessToken: string; user: User }>(
       '/auth/login',
       {
         method: 'POST',
@@ -108,7 +108,7 @@ export const api = {
   },
 
   async register(email: string, password: string) {
-    const response = await fetchWithAuth<{ accessToken: string; user: { id: number; email: string } }>(
+    const response = await fetchWithAuth<{ accessToken: string; user: User }>(
       '/auth/register',
       {
         method: 'POST',
@@ -150,106 +150,24 @@ export const api = {
   },
 
   async getMe() {
-    return fetchWithAuth<{ id: number; email: string }>('/auth/me');
+    return fetchWithAuth<User>('/auth/me');
   },
 
-  // User
-  async getPreferences() {
-    return fetchWithAuth<{ resumeText: string | null; keywords: string | null; refreshHours: number }>(
-      '/user/preferences'
-    );
-  },
-
-  async updatePreferences(keywords: string, refreshHours: number) {
-    return fetchWithAuth<{ message: string }>('/user/preferences', {
-      method: 'PUT',
-      body: JSON.stringify({ keywords, refreshHours }),
-    });
-  },
-
-  async uploadResume(file: File) {
-    const formData = new FormData();
-    formData.append('resume', file);
-
-    const url = `${API_BASE_URL}/user/resume`;
-    const headers: HeadersInit = {};
-    
-    if (accessToken) {
-      headers['Authorization'] = `Bearer ${accessToken}`;
-    }
-
-    try {
-      const response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: formData,
-        credentials: 'include',
-      });
-
-      return await response.json() as ApiResponse<{ message: string; textLength: number }>;
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Upload failed',
-      };
-    }
-  },
-
+  // User - matches backend GET /user/profile
   async getProfile() {
-    return fetchWithAuth<{
-      id: number;
-      email: string;
-      hasResume: boolean;
-      keywords: string | null;
-      refreshHours: number;
-    }>('/user/profile');
+    return fetchWithAuth<User>('/user/profile');
   },
 
   // Jobs
   async getJobs() {
-    return fetchWithAuth<Array<{
-      id: number;
-      userId: number;
-      title: string;
-      company: string;
-      location: string | null;
-      url: string | null;
-      source: string | null;
-      description: string | null;
-      score: number | null;
-      createdAt: string;
-    }>>('/jobs');
+    return fetchWithAuth<Job[]>('/jobs');
   },
 
   async getTopJobs(limit = 5) {
-    return fetchWithAuth<Array<{
-      id: number;
-      userId: number;
-      title: string;
-      company: string;
-      location: string | null;
-      url: string | null;
-      source: string | null;
-      description: string | null;
-      score: number | null;
-      createdAt: string;
-    }>>(`/jobs/top?limit=${limit}`);
+    return fetchWithAuth<Job[]>(`/jobs/top?limit=${limit}`);
   },
 
   async getJobCount() {
     return fetchWithAuth<{ count: number }>('/jobs/count');
   },
-
-  async deleteJob(id: number) {
-    return fetchWithAuth<void>(`/jobs/${id}`, {
-      method: 'DELETE',
-    });
-  },
-
-  async clearAllJobs() {
-    return fetchWithAuth<{ deletedCount: number }>('/jobs', {
-      method: 'DELETE',
-    });
-  },
 };
-
