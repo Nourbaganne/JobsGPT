@@ -11,6 +11,5 @@ router.get('/', jobsController.getAllJobs);
 router.get('/top', jobsController.getTopJobs);
 router.get('/count', jobsController.getJobCount);
 router.get('/:id', jobsController.getJobById);
-router.delete('/:id', jobsController.deleteJob);
 
 export default router;
