@@ -1,171 +1,348 @@
 @import "tailwindcss";
 
+/* ==========================================================================
+   JobsGPT — modern craft brand tokens
+   Built against landingpage/altalogy-design-skill (REPLICATION-MEASUREMENTS §23)
+   Register: warm paper · editorial-mid hero (64px) · Premium motion tier
+   ========================================================================== */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* === COLOR (Moderate tier — 9 tokens, §13) ============================= */
+  --paper: #f2efe9;          /* warm cream paper, CIELAB L*≈94 */
+  --paper-alt: #e9e5dc;      /* deeper paper for alternating sections */
+  --ink: #1b1a19;            /* warm near-black — never #000 */
+  --muted: #5f5a53;          /* 6.0:1 on paper — AA */
+  --accent: #1a5c46;         /* deep spruce — the ONE accent, ≤3 elements */
+  --accent-ink: #f2efe9;     /* 6.9:1 on accent — AA */
+  --hairline: #d6d0c5;
+  --canvas: #1b1a19;         /* dark interrupt sections */
+  --canvas-ink: #f2efe9;
+
+  /* === TYPE SCALE (§14 — editorial-mid tier) ============================= */
+  --type-eyebrow: 12px;
+  --type-body-sm: 14px;
+  --type-body: 16px;
+  --type-lead: 18px;
+  --type-h3: 22px;
+  --type-h2: 40px;           /* 0.63× H1 — inside the 0.5–0.7 band */
+  --type-h1: 64px;           /* editorial-mid: 60–72. NEVER 73–87 */
+
+  --track-h1: -0.03em;       /* -3% for editorial-mid (§23) */
+  --track-h2: -0.02em;
+  --track-eyebrow: -0.36px;
+
+  /* === SPACING (§1, §2, §3) ============================================= */
+  --section-pad: 100px;      /* studio median */
+  --section-pad-tight: 64px;
+  --section-pad-loose: 160px;
+  --hero-pad-top: 160px;
+
+  --container-content: 1440px;
+  --container-narrow: 1140px;
+  --container-prose: 900px;
+
+  /* === NAV =============================================================== */
+  --nav-height: 72px;
+  --nav-blur: 10px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+/* Mobile scale-down (§23 — roughly half the vertical rhythm) */
+@media (max-width: 767px) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --section-pad: 56px;
+    --section-pad-tight: 40px;
+    --section-pad-loose: 96px;
+    --hero-pad-top: 96px;
+    --type-h1: 40px;         /* editorial 64 → respectful 40 on mobile */
+    --type-h2: 30px;
+    --type-h3: 20px;
   }
 }
+
+/* `inline` keeps the var() reference live, so the media query above
+   re-flows every generated utility at the breakpoint. */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-paper-alt: var(--paper-alt);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-hairline: var(--hairline);
+  --color-canvas: var(--canvas);
+  --color-canvas-ink: var(--canvas-ink);
+
+  --font-display: var(--font-bricolage), "Bricolage Grotesque", sans-serif;
+  --font-body: var(--font-inter), "Inter", system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", monospace;
+  --font-editorial: var(--font-instrument), "Instrument Serif", serif;
+
+  --text-eyebrow: var(--type-eyebrow);
+  --text-body-sm: var(--type-body-sm);
+  --text-body: var(--type-body);
+  --text-lead: var(--type-lead);
+  --text-h3: var(--type-h3);
+  --text-h2: var(--type-h2);
+  --text-h1: var(--type-h1);
+}
+
+/* ==========================================================================
+   BASE
+   ========================================================================== */
+
+html {
+  box-sizing: border-box;
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+*, *::before, *::after { box-sizing: inherit; }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-inter), "Inter", system-ui, sans-serif;
+  font-size: var(--type-body);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* Smooth scrolling */
-html {
-  scroll-behavior: smooth;
+::selection {
+  background: var(--accent);
+  color: var(--accent-ink);
 }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: var(--paper); }
+::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 0; }
+::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* ==========================================================================
+   LAYOUT PRIMITIVES
+   ========================================================================== */
+
+@layer components {
+  .section {
+    padding-top: var(--section-pad);
+    padding-bottom: var(--section-pad);
+  }
+  .section--tight {
+    padding-top: var(--section-pad-tight);
+    padding-bottom: var(--section-pad-tight);
+  }
+  .section--loose {
+    padding-top: var(--section-pad-loose);
+    padding-bottom: var(--section-pad-loose);
+  }
+
+  .container-content,
+  .container-narrow,
+  .container-prose {
+    margin-inline: auto;
+    padding-inline: 24px;
+    width: 100%;
+  }
+  .container-content { max-width: var(--container-content); }
+  .container-narrow  { max-width: var(--container-narrow); }
+  .container-prose   { max-width: var(--container-prose); }
+
+  /* === TYPE ROLES ====================================================== */
+
+  .display {
+    font-family: var(--font-bricolage), "Bricolage Grotesque", sans-serif;
+    font-weight: 500;
+    line-height: 1.02;
+    letter-spacing: var(--track-h1);
+  }
+
+  /* Serif-italic accent word inside a display headline (P8, Strategy A) */
+  .editorial-accent {
+    font-family: var(--font-instrument), "Instrument Serif", serif;
+    font-style: italic;
+    font-weight: 400;
+    letter-spacing: -0.01em;
+  }
+
+  /* Mono uppercase eyebrow — 12px / -0.36px / 2px x-height shim (§23) */
+  .eyebrow {
+    font-family: var(--font-plex-mono), "IBM Plex Mono", monospace;
+    font-size: var(--type-eyebrow);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: var(--track-eyebrow);
+    line-height: 1.4;
+    padding-top: 2px;
+    color: var(--muted);
+  }
+
+  /* Bracketed mono postscript — the brand-voice device (P8) */
+  .postscript {
+    font-family: var(--font-plex-mono), "IBM Plex Mono", monospace;
+    font-size: var(--type-body-sm);
+    text-transform: uppercase;
+    letter-spacing: var(--track-eyebrow);
+    line-height: 1.6;
+    color: var(--muted);
+  }
+  .postscript::before { content: "[ "; }
+  .postscript::after  { content: " ]"; }
+
+  /* === CTA PRIMITIVE (P10 — anchors only, 0px radius, ≥2 props on hover) */
+
+  .cta {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 24px;
+    border-radius: 0;
+    text-decoration: none;
+    font-family: var(--font-inter), "Inter", system-ui, sans-serif;
+    font-size: var(--type-body);
+    font-weight: 500;
+    line-height: 1;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, color 0.2s ease,
+                border-color 0.2s ease, transform 0.2s ease;
+  }
+  .cta--primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    border-color: var(--accent);
+  }
+  .cta--secondary {
+    background: transparent;
+    color: var(--ink);
+    border-color: var(--ink);
+  }
+  .cta--ghost {
+    padding-inline: 0;
+    color: var(--ink);
+    text-decoration: underline;
+    text-decoration-color: var(--hairline);
+    text-underline-offset: 6px;
+  }
+  .cta--inverse {
+    background: var(--canvas-ink);
+    color: var(--canvas);
+    border-color: var(--canvas-ink);
+  }
+
+  .cta:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* === HAIRLINE SURFACES =============================================== */
+
+  .hairline-box {
+    border: 1px solid var(--hairline);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .rule {
+    border: 0;
+    border-top: 1px solid var(--hairline);
+    margin: 0;
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
+/* Hover effects only where hovering is real (SKILL Step 6) */
+@media (hover: hover) and (pointer: fine) {
+  .cta--primary:hover {
+    background-color: var(--ink);
+    border-color: var(--ink);
+    transform: translateY(-2px);
+  }
+  .cta--secondary:hover {
+    background-color: var(--ink);
+    color: var(--paper);
+    transform: translateY(-2px);
+  }
+  .cta--ghost:hover {
+    color: var(--muted);
+    text-decoration-color: var(--ink);
+  }
+  .cta--inverse:hover {
+    background-color: transparent;
+    color: var(--canvas-ink);
+    transform: translateY(-2px);
+  }
+  .hairline-box--hover:hover {
+    border-color: var(--ink);
+    background: color-mix(in srgb, var(--ink) 3%, transparent);
+  }
 }
 
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-}
+/* ==========================================================================
+   MOTION — Premium tier. Every keyframe is component-prefixed (no `fadeIn`).
+   ========================================================================== */
 
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
-}
-
-/* Marquee Animations */
 @keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(calc(-100% - var(--gap)));
-  }
+  from { transform: translateX(0); }
+  to   { transform: translateX(calc(-100% - var(--gap))); }
 }
-
 @keyframes marquee-vertical {
-  from {
-    transform: translateY(0);
-  }
-  to {
-    transform: translateY(calc(-100% - var(--gap)));
-  }
+  from { transform: translateY(0); }
+  to   { transform: translateY(calc(-100% - var(--gap))); }
+}
+.animate-marquee { animation: marquee var(--duration) linear infinite; }
+.animate-marquee-vertical { animation: marquee-vertical var(--duration) linear infinite; }
+
+@keyframes queue-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.35; transform: scale(0.82); }
+}
+.queue-pulse { animation: queue-pulse 2.4s ease-in-out infinite; }
+
+@keyframes scan-sweep {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  35%  { opacity: 1; }
+  100% { transform: translateY(320%); opacity: 0; }
+}
+.scan-sweep { animation: scan-sweep 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite; }
+
+@keyframes match-bar-fill {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
 }
 
-.animate-marquee {
-  animation: marquee var(--duration) linear infinite;
-}
-
-.animate-marquee-vertical {
-  animation: marquee-vertical var(--duration) linear infinite;
-}
-
-/* Scroll Animations */
+/* Scroll-reveal — driven by the IntersectionObserver in LenisProvider */
 .scroll-animate {
   opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+  transform: translateY(16px);
+  transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
-
 .scroll-animate.animate-in-view {
   opacity: 1;
-  transform: translateY(0);
+  transform: none;
 }
+.scroll-stagger-1 { transition-delay: 0.06s; }
+.scroll-stagger-2 { transition-delay: 0.12s; }
+.scroll-stagger-3 { transition-delay: 0.18s; }
+.scroll-stagger-4 { transition-delay: 0.24s; }
+.scroll-stagger-5 { transition-delay: 0.30s; }
+.scroll-stagger-6 { transition-delay: 0.36s; }
 
-.scroll-fade-up {
-  transform: translateY(30px);
-}
+/* ==========================================================================
+   REDUCED MOTION — mandatory gate (SKILL Step 6)
+   ========================================================================== */
 
-.scroll-fade-up.animate-in-view {
-  transform: translateY(0);
-}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
 
-.scroll-fade-left {
-  transform: translateX(-30px);
-}
-
-.scroll-fade-left.animate-in-view {
-  transform: translateX(0);
-}
-
-.scroll-fade-right {
-  transform: translateX(30px);
-}
-
-.scroll-fade-right.animate-in-view {
-  transform: translateX(0);
-}
-
-.scroll-scale {
-  transform: scale(0.95);
-}
-
-.scroll-scale.animate-in-view {
-  transform: scale(1);
-}
-
-.scroll-blur {
-  filter: blur(5px);
-}
-
-.scroll-blur.animate-in-view {
-  filter: blur(0);
-}
-
-.scroll-rotate {
-  transform: rotate(-5deg);
-}
-
-.scroll-rotate.animate-in-view {
-  transform: rotate(0);
-}
-
-/* Stagger delays */
-.scroll-stagger-1 { transition-delay: 0.1s; }
-.scroll-stagger-2 { transition-delay: 0.2s; }
-.scroll-stagger-3 { transition-delay: 0.3s; }
-.scroll-stagger-4 { transition-delay: 0.4s; }
-.scroll-stagger-5 { transition-delay: 0.5s; }
-.scroll-stagger-6 { transition-delay: 0.6s; }
-
-/* Gradient animation */
-@keyframes gradient {
-  0%, 100% {
-    background-position: 0% 50%;
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
-  50% {
-    background-position: 100% 50%;
+
+  /* Never leave reveal-on-scroll content invisible when motion is off. */
+  .scroll-animate {
+    opacity: 1 !important;
+    transform: none !important;
   }
-}
-
-/* Text reveal effect */
-.text-reveal {
-  background-size: 200% auto;
-  background-clip: text;
-}
-
-/* Scroll glow effect */
-.scroll-glow.animate-in-view {
-  text-shadow: 0 0 30px rgba(91, 111, 163, 0.5);
-}
-
-/* Magnetic button effect placeholder */
-.magnetic {
-  transition: transform 0.3s ease;
 }

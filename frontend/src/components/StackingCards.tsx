@@ -1,76 +1,101 @@
 'use client';
 
-import { useTransform, motion, useScroll, MotionValue } from 'motion/react';
+import {
+  useTransform,
+  motion,
+  useScroll,
+  useReducedMotion,
+  type MotionValue,
+} from 'motion/react';
 import { useRef } from 'react';
-import { Brain, Building2, Mail, Bell, FileText, LayoutDashboard, LucideIcon } from 'lucide-react';
 
-const features = [
+const features: { title: string; description: string }[] = [
   {
-    title: 'AI-Powered Job Matching',
+    title: 'Resume-Scored Matching',
     description:
-      'Smart algorithms analyze your skills, experience, and preferences to find jobs that are a perfect fit for your career goals. No more endless scrolling through irrelevant listings.',
-    icon: Brain,
-    color: '#22223b',
+      'Every opening is scored against your resume before it reaches you, so the queue is ordered by fit instead of post date.',
   },
   {
     title: 'Company Intel',
     description:
-      'Get insider access to CEO contacts, hiring managers, and recruiter details. Know exactly who to reach out to and make connections that matter. Skip the application black hole.',
-    icon: Building2,
-    color: '#5b6fa3',
+      'The recruiter, the hiring manager, and the person who signs off — named, with a working address.',
   },
   {
-    title: 'AI Email Generator',
+    title: 'Drafted Outreach',
     description:
-      'Generate personalized outreach emails to HR and recruiters. Stand out with tailored messages that get responses. Our AI crafts compelling emails that highlight your unique value.',
-    icon: Mail,
-    color: '#6b7db3',
+      'A drafted outreach email for each match, written from your resume and the posting itself. You edit it, or you send it.',
   },
   {
     title: 'Real-time Alerts',
     description:
-      'Instant notifications when new matching jobs are posted. Be the first to apply and beat the competition. Never miss an opportunity that matches your criteria.',
-    icon: Bell,
-    color: '#5b6fa3',
+      'A posting that clears your bar reaches you the day it goes up, not the week after.',
   },
   {
     title: 'Resume Analysis',
     description:
-      'AI-powered resume optimization. Get insights on how to improve your resume for each specific role. Understand what employers are looking for and tailor your application.',
-    icon: FileText,
-    color: '#22223b',
+      'Where your resume falls short of a specific role, in plain language, one role at a time.',
   },
   {
     title: 'Application Tracker',
     description:
-      'Track all your applications in one place. Never lose track of where you applied, interview schedules, or follow-up dates. Stay organized throughout your job search journey.',
-    icon: LayoutDashboard,
-    color: '#2d3047',
+      'Every application, reply, and follow-up date in one list, so nothing quietly goes cold.',
   },
 ];
 
+const number = (i: number) => String(i + 1).padStart(2, '0');
+
+function StackHeader() {
+  return (
+    <div className="container-narrow text-center">
+      <p className="eyebrow">FEATURES</p>
+      <h2 className="display text-h2 text-ink mt-4">Everything the search needs.</h2>
+      <p className="text-lead text-muted mt-4 mx-auto max-w-[900px]">
+        Six parts of the search, running whether or not you are at your desk.
+      </p>
+    </div>
+  );
+}
+
 export default function StackingCards() {
   const container = useRef<HTMLDivElement>(null);
+  const prefersReducedMotion = useReducedMotion();
+
   const { scrollYProgress } = useScroll({
     target: container,
     offset: ['start start', 'end end'],
   });
 
-  return (
-    <section ref={container} className="relative bg-white">
-      {/* Header - Sticky at top */}
-      <div className="sticky top-0 z-10 bg-white pt-20 pb-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-extrabold text-[#22223b] sm:text-4xl lg:text-5xl">
-            Everything You Need to Succeed
-          </h2>
-          <p className="mt-4 text-lg text-[#4a4e69] sm:text-xl max-w-3xl mx-auto">
-            Our platform provides comprehensive tools and insights to give you an unfair advantage in your job search.
-          </p>
+  // Reduced motion: no 600vh sticky stack, no scroll transforms — a flat
+  // hairline grid that reads top to bottom (spec §3 Motion, §6).
+  if (prefersReducedMotion) {
+    return (
+      <section className="section bg-paper-alt">
+        <StackHeader />
+        <div className="container-narrow mt-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {features.map((feature, i) => (
+              <article
+                key={`feature_${i}`}
+                className="border border-hairline bg-paper p-6 md:p-10"
+              >
+                <span className="eyebrow">{number(i)}</span>
+                <h3 className="display text-h3 text-ink mt-6">{feature.title}</h3>
+                <p className="text-body text-muted mt-4">{feature.description}</p>
+              </article>
+            ))}
+          </div>
         </div>
+      </section>
+    );
+  }
+
+  return (
+    <section ref={container} className="relative bg-paper-alt">
+      {/* Header — sticks while the stack scrolls beneath it */}
+      <div className="sticky top-0 z-10 bg-paper-alt section--tight">
+        <StackHeader />
       </div>
 
-      {/* Cards Container */}
       <div className="relative">
         {features.map((feature, i) => {
           const targetScale = 1 - (features.length - i) * 0.05;
@@ -80,8 +105,6 @@ export default function StackingCards() {
               i={i}
               title={feature.title}
               description={feature.description}
-              Icon={feature.icon}
-              color={feature.color}
               progress={scrollYProgress}
               range={[i * 0.15, 1]}
               targetScale={targetScale}
@@ -97,8 +120,6 @@ interface CardProps {
   i: number;
   title: string;
   description: string;
-  Icon: LucideIcon;
-  color: string;
   progress: MotionValue<number>;
   range: [number, number];
   targetScale: number;
@@ -108,8 +129,6 @@ const Card: React.FC<CardProps> = ({
   i,
   title,
   description,
-  Icon,
-  color,
   progress,
   range,
   targetScale,
@@ -131,61 +150,26 @@ const Card: React.FC<CardProps> = ({
       <motion.div
         style={{
           scale,
-          top: `calc(-5vh + ${i * 30}px)`,
+          top: `calc(-5vh + ${i * 24}px)`,
         }}
-        className="relative -top-[10%] w-[90%] max-w-4xl origin-top"
+        className="relative -top-[10%] w-[90%] max-w-[900px] origin-top"
       >
         <motion.div
           style={{ opacity }}
-          className="rounded-3xl p-8 md:p-12 shadow-2xl border border-[#c9ada7]/20"
-          initial={{ backgroundColor: '#ffffff' }}
+          className="border border-hairline bg-paper p-6 md:p-10"
         >
-          {/* Gradient Background */}
-          <div 
-            className="absolute inset-0 rounded-3xl opacity-10"
-            style={{ backgroundColor: color }}
-          />
-          
-          <div className="relative z-10 flex flex-col md:flex-row items-start gap-8">
-            {/* Icon */}
-            <div 
-              className="flex-shrink-0 w-20 h-20 rounded-2xl flex items-center justify-center shadow-lg"
-              style={{ backgroundColor: color }}
-            >
-              <Icon className="h-10 w-10 text-white" />
+          <div className="grid gap-6 md:grid-cols-[120px_1fr] md:gap-10">
+            <div>
+              <span className="eyebrow">{number(i)}</span>
             </div>
 
-            {/* Content */}
-            <div className="flex-1">
-              <div className="flex items-center gap-3 mb-4">
-                <span 
-                  className="text-sm font-bold px-3 py-1 rounded-full text-white"
-                  style={{ backgroundColor: color }}
-                >
-                  {String(i + 1).padStart(2, '0')}
-                </span>
-                <h3 className="text-2xl md:text-3xl font-bold text-[#22223b]">
-                  {title}
-                </h3>
-              </div>
-              <p className="text-lg text-[#4a4e69] leading-relaxed">
-                {description}
-              </p>
+            <div>
+              <h3 className="display text-h3 text-ink">{title}</h3>
+              <p className="text-body text-muted mt-4">{description}</p>
             </div>
           </div>
-
-          {/* Decorative Elements */}
-          <div 
-            className="absolute top-4 right-4 w-24 h-24 rounded-full blur-3xl opacity-20"
-            style={{ backgroundColor: color }}
-          />
-          <div 
-            className="absolute bottom-4 left-4 w-32 h-32 rounded-full blur-3xl opacity-10"
-            style={{ backgroundColor: color }}
-          />
         </motion.div>
       </motion.div>
     </div>
   );
 };
-
