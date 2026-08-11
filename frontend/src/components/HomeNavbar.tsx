@@ -5,8 +5,9 @@ import { Menu, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useLenis } from "lenis/react";
 import { useAuth } from "@/hooks/useAuth";
+import Wordmark from "@/components/Wordmark";
 
-/** Fixed bar is 72px (--nav-height) + 8px of air on scroll-to. Ladder value. */
+/** Fixed bar is 64px (--nav-height) + 16px of air on scroll-to. Ladder value. */
 const NAV_OFFSET = 80;
 
 /** Anchor list per spec §6. ids are owned by page.tsx. */
@@ -16,6 +17,12 @@ const NAV_LINKS = [
     { id: "pricing", label: "PRICING" },
     { id: "faq", label: "FAQ" },
 ] as const;
+
+/** Keyboard ring, matched to HomeFooter. Only azure in the file, and it is
+    action-coded by definition — it exists solely on focus, so it never spends
+    from the 2-hue viewport budget. */
+const FOCUS_RING =
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 /** Minimal shape of the Lenis instance some setups park on `window`. */
 type LenisLike = {
@@ -32,7 +39,7 @@ export default function HomeNavbar() {
     const [scrolled, setScrolled] = useState(false);
     const [activeSection, setActiveSection] = useState("");
 
-    // Hairline appears only once scrolled; active anchor gets the ink underline.
+    // Bottom rule appears only once scrolled; active anchor gets the ink underline.
     useEffect(() => {
         const handleScroll = () => {
             setScrolled(window.scrollY > 16);
@@ -91,11 +98,17 @@ export default function HomeNavbar() {
         [lenis]
     );
 
+    /* Veil raised 80 → 90 for the indigo ladder. The surface step is not the
+       problem; the hues are. At 80% a fifth of whatever passes under the bar
+       came through the blur, so mint meters, azure CTAs and amber chips smeared
+       colour into a bar that is specified neutral-only. 90% halves that to a
+       tint below the perceptual floor while the blur stays legible, and it also
+       leaves the bar readable where backdrop-filter is unsupported. */
     return (
         <nav
             aria-label="Main"
-            className={`fixed inset-x-0 top-0 z-50 bg-paper/70 border-b transition-colors duration-200 ${
-                scrolled ? "border-hairline" : "border-transparent"
+            className={`fixed inset-x-0 top-0 z-50 bg-canvas/90 border-b transition-colors duration-200 ${
+                scrolled ? "border-line" : "border-transparent"
             }`}
             style={{
                 backdropFilter: "blur(var(--nav-blur))",
@@ -103,13 +116,15 @@ export default function HomeNavbar() {
             }}
         >
             <div className="container-content">
-                <div className="flex h-[72px] items-center justify-between gap-6">
-                    {/* Typographic wordmark — the PNG is retired from the nav (P1) */}
-                    <Link href="/" aria-label="JobsGPT — home" className="flex items-center">
-                        <span className="display text-[20px] leading-none text-ink">
-                            JobsGPT
-                            <sup className="eyebrow text-muted">¹</sup>
-                        </span>
+                <div className="flex h-[var(--nav-height)] items-center justify-between gap-6">
+                    {/* Typographic wordmark — the PNG is retired from the nav (P1).
+                        No status dot here: the hero already spends the accent budget. */}
+                    <Link
+                        href="/"
+                        aria-label="Lynceus — home"
+                        className={`flex items-center ${FOCUS_RING}`}
+                    >
+                        <Wordmark className="text-[22px] text-ink" />
                     </Link>
 
                     {/* Desktop anchors — mono uppercase, ink underline marks the active section */}
@@ -122,7 +137,7 @@ export default function HomeNavbar() {
                                     href={`#${id}`}
                                     onClick={(e) => handleSmoothScroll(e, `#${id}`)}
                                     aria-current={isActive ? "true" : undefined}
-                                    className={`group eyebrow relative block py-2 transition-colors duration-200 [@media(hover:hover)_and_(pointer:fine)]:hover:text-ink ${
+                                    className={`group relative block py-2 font-mono text-eyebrow uppercase tracking-[0.08em] transition-colors duration-200 ${FOCUS_RING} [@media(hover:hover)_and_(pointer:fine)]:hover:text-ink ${
                                         isActive ? "text-ink" : "text-muted"
                                     }`}
                                 >
@@ -167,22 +182,24 @@ export default function HomeNavbar() {
                         aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
                         aria-expanded={mobileMenuOpen}
                         aria-controls="home-nav-mobile"
-                        className="inline-flex items-center justify-center p-2 text-ink transition-colors duration-200 lg:hidden [@media(hover:hover)_and_(pointer:fine)]:hover:bg-ink [@media(hover:hover)_and_(pointer:fine)]:hover:text-paper"
+                        className={`inline-flex items-center justify-center p-2 text-muted transition-colors duration-200 lg:hidden ${FOCUS_RING} [@media(hover:hover)_and_(pointer:fine)]:hover:bg-panel-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-ink`}
                     >
                         {mobileMenuOpen ? (
-                            <X className="h-5 w-5" strokeWidth={1.5} />
+                            <X className="h-4 w-4" strokeWidth={1.5} />
                         ) : (
-                            <Menu className="h-5 w-5" strokeWidth={1.5} />
+                            <Menu className="h-4 w-4" strokeWidth={1.5} />
                         )}
                     </button>
                 </div>
             </div>
 
-            {/* Mobile panel — full-width paper, hairline dividers, hard corners */}
+            {/* Mobile panel — full-width canvas, 1px line dividers, mono anchors.
+                border-y, not border-t: the sheet is canvas-on-canvas now, so
+                without a closing rule its bottom edge simply dissolves. */}
             {mobileMenuOpen && (
                 <div
                     id="home-nav-mobile"
-                    className="border-t border-hairline bg-paper lg:hidden"
+                    className="border-y border-line bg-canvas lg:hidden"
                 >
                     <div className="container-content">
                         {NAV_LINKS.map(({ id, label }) => (
@@ -191,7 +208,7 @@ export default function HomeNavbar() {
                                 href={`#${id}`}
                                 onClick={(e) => handleSmoothScroll(e, `#${id}`)}
                                 aria-current={activeSection === id ? "true" : undefined}
-                                className={`eyebrow block border-b border-hairline py-4 ${
+                                className={`block border-b border-line py-4 font-mono text-eyebrow uppercase tracking-[0.08em] ${FOCUS_RING} ${
                                     activeSection === id ? "text-ink" : "text-muted"
                                 }`}
                             >
@@ -204,7 +221,7 @@ export default function HomeNavbar() {
                                 <Link
                                     href="/dashboard"
                                     onClick={closeMenu}
-                                    className="cta cta--primary w-full justify-center"
+                                    className="cta cta--secondary w-full justify-center"
                                 >
                                     Dashboard
                                 </Link>
@@ -220,7 +237,7 @@ export default function HomeNavbar() {
                                     <Link
                                         href="/auth/register"
                                         onClick={closeMenu}
-                                        className="cta cta--primary w-full justify-center"
+                                        className="cta cta--secondary w-full justify-center"
                                     >
                                         Start free
                                     </Link>

@@ -7,9 +7,19 @@ export function errorHandler(
   res: Response,
   next: NextFunction
 ): void {
-  // Log error in development
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Error:', err);
+  // Expected 4xx outcomes — a wrong password, an absent session cookie, a
+  // missing row — are the API working, not failing. Printing them with a full
+  // stack trace makes ordinary use look like a crash, which buries the 5xx
+  // errors that actually need reading. One line for those, traces for the rest.
+  const isExpected = err instanceof ApiError && err.statusCode < 500;
+
+  if (isExpected) {
+    if (process.env.NODE_ENV === 'development') {
+      const { statusCode, message } = err as ApiError;
+      console.warn(`↩︎  ${statusCode} ${req.method} ${req.originalUrl} — ${message}`);
+    }
+  } else {
+    console.error(`✖  ${req.method} ${req.originalUrl}`, err);
   }
 
   // Handle known API errors

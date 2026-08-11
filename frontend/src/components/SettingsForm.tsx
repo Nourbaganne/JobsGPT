@@ -58,14 +58,9 @@ export default function SettingsForm() {
 
     if (loading) {
         return (
-            <div className="flex items-center justify-center py-20">
-                <div className="flex items-center space-x-3 text-[#4a4e69]">
-                    <svg className="animate-spin h-6 w-6" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span className="text-base font-medium">Loading settings...</span>
-                </div>
+            <div className="flex items-center justify-center gap-2 py-10">
+                <span className="spinner text-dim" aria-hidden="true" />
+                <span className="eyebrow">LOADING SETTINGS</span>
             </div>
         );
     }
@@ -73,83 +68,83 @@ export default function SettingsForm() {
     return (
         <>
             {notification && (
-                <div className={`mb-6 rounded-xl p-4 border-2 animate-slide-in ${
-                    notification.type === 'success' 
-                        ? 'bg-green-50 border-green-200 text-green-800' 
-                        : 'bg-red-50 border-red-200 text-red-800'
-                }`}>
-                    <div className="flex items-center">
-                        {notification.type === 'success' ? (
-                            <CheckCircle className="h-5 w-5 mr-3 flex-shrink-0" />
-                        ) : (
-                            <X className="h-5 w-5 mr-3 flex-shrink-0" />
-                        )}
-                        <p className="font-semibold text-sm">{notification.message}</p>
-                        <button
-                            onClick={() => setNotification(null)}
-                            className="ml-auto text-gray-400 hover:text-gray-600"
-                        >
-                            <X className="h-5 w-5" />
-                        </button>
-                    </div>
+                <div
+                    role="status"
+                    className={`alert mb-6 ${
+                        notification.type === 'success' ? 'alert--ok' : 'alert--error'
+                    }`}
+                >
+                    {notification.type === 'success' ? (
+                        <CheckCircle className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                    ) : (
+                        <X className="h-4 w-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                    )}
+                    <p className="min-w-0 flex-1">{notification.message}</p>
+                    <button
+                        onClick={() => setNotification(null)}
+                        className="btn btn--ghost shrink-0 p-0 text-current"
+                        aria-label="Dismiss"
+                    >
+                        <X className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                    </button>
                 </div>
             )}
-            <div className="bg-white rounded-2xl shadow-lg border border-[#b8c5d6]/30 divide-y divide-[#b8c5d6]/30 overflow-hidden">
-                <div className="px-6 py-10 sm:px-8">
-                    <div className="mb-8">
-                        <h3 className="text-2xl font-bold text-[#22223b]">
-                            Resume Upload
-                        </h3>
-                        <p className="mt-2 text-base text-[#4a4e69]">
-                            Upload your resume to help us match you with relevant job opportunities.
-                        </p>
-                    </div>
-                    <FileUploader />
-                </div>
 
-                <div className="px-6 py-10 sm:px-8">
-                    <form onSubmit={handleSave} className="space-y-8">
-                        <div>
-                            <h3 className="text-2xl font-bold text-[#22223b] mb-2">
-                                Search Preferences
-                            </h3>
-                            <p className="text-base text-[#4a4e69] mb-8">
-                                Customize your job search by adding keywords that match your skills and interests.
+            <div className="space-y-6">
+                {/* Resume — the record everything else is scored against. */}
+                <section className="panel overflow-hidden">
+                    <div className="panel__header">
+                        <span>RESUME</span>
+                    </div>
+                    <div className="panel__body">
+                        <p className="text-body-sm max-w-[64ch] text-muted">
+                            Every opening is scored against this file. Replace it whenever it changes.
+                        </p>
+                        <div className="mt-6">
+                            <FileUploader />
+                        </div>
+                    </div>
+                </section>
+
+                {/* Search preferences — the only hue here is azure, on submit. */}
+                <section className="panel overflow-hidden">
+                    <div className="panel__header">
+                        <span>SEARCH PREFERENCES</span>
+                    </div>
+                    <form onSubmit={handleSave}>
+                        <div className="panel__body">
+                            <p className="text-body-sm max-w-[64ch] text-muted">
+                                Keywords narrow what the scan brings back.
                             </p>
-                            <label
-                                htmlFor="keywords"
-                                className="block text-sm font-semibold text-[#22223b] mb-3"
-                            >
-                                Keywords (comma separated)
-                            </label>
-                            <div className="mt-1">
+
+                            <div className="field mt-6">
+                                <label htmlFor="keywords" className="label">
+                                    Keywords (comma separated)
+                                </label>
                                 <textarea
                                     id="keywords"
                                     name="keywords"
                                     rows={5}
-                                    className="shadow-sm focus:ring-2 focus:ring-[#5b6fa3] focus:border-[#5b6fa3] block w-full sm:text-sm border-[#b8c5d6] rounded-xl p-4 border bg-[#e8eef5] focus:bg-white transition-all duration-200 resize-none text-[#22223b]"
+                                    className="input resize-none"
                                     placeholder="react, next.js, typescript, node.js, python"
                                     value={keywords}
                                     onChange={(e) => setKeywords(e.target.value)}
                                 />
-                                <p className="mt-3 text-sm text-[#4a4e69]">
+                                <p className="text-body-sm text-dim">
                                     Separate multiple keywords with commas. These will be used to find relevant job postings.
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex justify-end pt-6 border-t border-[#b8c5d6]/30">
+                        <div className="flex justify-end border-t border-line px-6 py-4">
                             <button
                                 type="submit"
                                 disabled={saving}
-                                className="inline-flex items-center justify-center px-8 py-3.5 border border-transparent shadow-lg text-base font-semibold rounded-xl text-white bg-[#22223b] hover:bg-[#2d3047] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5b6fa3] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 hover:scale-105"
+                                className="btn btn--primary"
                             >
                                 {saving ? (
                                     <>
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
+                                        <span className="spinner" aria-hidden="true" />
                                         Saving...
                                     </>
                                 ) : (
@@ -158,7 +153,7 @@ export default function SettingsForm() {
                             </button>
                         </div>
                     </form>
-                </div>
+                </section>
             </div>
         </>
     );

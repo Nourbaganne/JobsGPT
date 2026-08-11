@@ -82,3 +82,33 @@ export async function getJobById(
     next(error);
   }
 }
+
+/**
+ * Delete a job owned by the authenticated user.
+ *
+ * The route (DELETE /api/jobs/:id) and this controller were referenced by
+ * src/routes/jobs.ts but never implemented, which was a compile error.
+ */
+export async function deleteJob(
+  req: AuthenticatedRequest,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const userId = req.user!.userId;
+    const jobId = parseInt(req.params.id);
+
+    if (isNaN(jobId)) {
+      throw new BadRequestError('Invalid job ID');
+    }
+
+    const deleted = await jobsService.deleteJob(jobId, userId);
+    if (!deleted) {
+      throw new NotFoundError('Job not found');
+    }
+
+    sendNoContent(res);
+  } catch (error) {
+    next(error);
+  }
+}

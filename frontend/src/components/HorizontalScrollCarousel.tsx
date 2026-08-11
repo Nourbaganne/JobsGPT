@@ -1,5 +1,6 @@
 'use client';
 
+import type { MotionValue } from 'motion/react';
 import { motion, useReducedMotion, useScroll, useTransform } from 'motion/react';
 import { useEffect, useRef, useState } from 'react';
 
@@ -15,8 +16,17 @@ function throttle<A extends unknown[]>(fn: (...args: A) => void, wait: number) {
     };
 }
 
-// Hook to get element's scroll position range
-function useElementViewportPosition(ref: React.RefObject<HTMLElement | null>) {
+// Hook to get element's scroll position range.
+// `pinRef` is the sticky child: the animation must finish exactly when that
+// child unpins, which happens once the section's bottom meets the child's
+// bottom — i.e. after (section height − pin height) of scroll. Measuring the
+// pin instead of assuming a viewport-tall one keeps the range honest whatever
+// height it settles at. `revision` re-measures when the spacer is resized.
+function useElementViewportPosition(
+    ref: React.RefObject<HTMLElement | null>,
+    pinRef?: React.RefObject<HTMLElement | null>,
+    revision?: number | null,
+) {
     const [position, setPosition] = useState<[number, number]>([0, 0]);
 
     useEffect(() => {
@@ -25,14 +35,18 @@ function useElementViewportPosition(ref: React.RefObject<HTMLElement | null>) {
         const updatePosition = () => {
             if (!ref.current) return;
             const pageHeight = document.body.scrollHeight - window.innerHeight;
+            const pinHeight = pinRef?.current?.offsetHeight ?? window.innerHeight;
             const start = ref.current.offsetTop;
-            const end = start + ref.current.offsetHeight - window.innerHeight;
+            const end = start + ref.current.offsetHeight - pinHeight;
 
             // Clamp values between 0 and 1
             const startRatio = Math.max(0, Math.min(1, start / pageHeight));
             const endRatio = Math.max(0, Math.min(1, end / pageHeight));
 
-            setPosition([startRatio, endRatio]);
+            // Once the row fits the viewport the spacer collapses to the pin
+            // height and start meets end. A zero-width input range makes the
+            // interpolation divide by zero, so keep it strictly increasing.
+            setPosition([startRatio, Math.max(endRatio, startRatio + 1e-9)]);
         };
 
         // Initial calculation
@@ -52,7 +66,7 @@ function useElementViewportPosition(ref: React.RefObject<HTMLElement | null>) {
             window.removeEventListener('resize', updatePosition);
             timeouts.forEach(clearTimeout);
         };
-    }, [ref]);
+    }, [ref, pinRef, revision]);
 
     return { position };
 }
@@ -68,42 +82,56 @@ const STEPS: readonly Step[] = [
     {
         number: '01',
         title: 'Upload your resume',
-        description:
-            'One PDF. We read the roles, the tools and the years, and that becomes the profile every posting is scored against.',
+        description: 'One PDF.',
     },
     {
         number: '02',
         title: 'Set your bar',
-        description:
-            'Title, location, salary floor, remote or on-site. Anything below the bar never reaches you.',
+        description: 'Title, location, salary floor, remote or not.',
     },
     {
         number: '03',
         title: 'We scan continuously',
-        description:
-            'Ten boards, checked around the clock. A new posting is scored against your resume within minutes of going live.',
+        description: 'Ten boards, around the clock.',
     },
     {
         number: '04',
         title: 'Review the queue',
-        description:
-            'Each match arrives with its score and the reason behind it. Keep what fits and clear the rest in one pass.',
+        description: 'Ranked by fit, with the reason.',
     },
     {
         number: '05',
         title: 'Send the outreach',
-        description:
-            'We find the person actually doing the hiring and draft the email. You read it, change what you want, hit send.',
+        description: 'Drafted for you. You hit send.',
     },
 ];
 
+// The step numbers trace the state machine, so the figure carries the state:
+// 01–02 are setup and stay neutral, 03 is the scan (amber), 04 is the matched
+// queue (mint), 05 is the AI-drafted outreach (violet).
+const STEP_TONE: Record<string, string> = {
+    '01': 'text-dim',
+    '02': 'text-dim',
+    '03': 'text-amber',
+    '04': 'text-mint',
+    '05': 'text-violet',
+};
+
 function StepCard({ step }: { step: Step }) {
+    const tone = STEP_TONE[step.number] ?? 'text-dim';
+
     return (
         <li className="shrink-0">
-            <article className="hairline-box hairline-box--hover bg-paper flex h-[380px] w-[320px] flex-col p-10">
-                <span className="font-mono text-h2 leading-none text-muted">{step.number}</span>
-                <h3 className="display mt-auto text-h3 text-ink">{step.title}</h3>
-                <p className="mt-4 text-body-sm text-muted">{step.description}</p>
+            <article className="panel panel--hover flex h-full w-[320px] flex-col overflow-hidden">
+                <div className="panel__header">
+                    <span className={`tabular text-h3 leading-none tracking-normal ${tone}`}>
+                        {step.number}
+                    </span>
+                </div>
+                <div className="panel__body">
+                    <h3 className="display text-h3 text-ink">{step.title}</h3>
+                    <p className="mt-4 text-body-sm text-muted">{step.description}</p>
+                </div>
             </article>
         </li>
     );
@@ -113,21 +141,30 @@ function SectionHeader() {
     return (
         <header className="w-full max-w-[900px] px-6">
             <p className="eyebrow">HOW IT WORKS</p>
-            <h2 id="how-it-works-heading" className="display mt-4 text-h2 text-ink">
-                Five steps, start to <span className="editorial-accent">sent</span>.
+            <h2 id="how-it-works-heading" className="display mt-4 text-h2 text-muted">
+                Five steps, start to <span className="text-ink">sent</span>.
             </h2>
-            <p className="mt-4 text-lead text-muted">
-                You do the first two. The rest runs without you.
-            </p>
+            <p className="mt-4 text-lead text-muted">The rest runs without you.</p>
         </header>
     );
 }
 
-function ScrollIndicator() {
+// The track is a run meter, so it uses the .meter primitive. It is navigation
+// chrome, not product state, so the fill overrides .meter__fill's mint with a
+// neutral bg-muted — the hues in this section belong to the steps.
+// Without a progress value (reduced motion) it renders as an empty track.
+function ScrollIndicator({ progress }: { progress?: MotionValue<number> }) {
     return (
-        <div className="eyebrow flex w-full items-center gap-4 px-6">
-            <span>01 / 05</span>
-            <span aria-hidden="true" className="h-px flex-1 bg-hairline" />
+        <div className="eyebrow flex w-full items-center gap-4 px-6 text-dim">
+            <span className="tabular">01 / 05</span>
+            <span aria-hidden="true" className="meter relative flex-1">
+                {progress ? (
+                    <motion.span
+                        className="meter__fill absolute inset-0 origin-left bg-muted"
+                        style={{ scaleX: progress }}
+                    />
+                ) : null}
+            </span>
             <span>DRAG OR SCROLL</span>
         </div>
     );
@@ -135,32 +172,43 @@ function ScrollIndicator() {
 
 export default function HorizontalScrollCarousel() {
     const mainRef = useRef<HTMLDivElement>(null);
+    const pinRef = useRef<HTMLDivElement>(null);
     const carouselRef = useRef<HTMLOListElement>(null);
-    const { position } = useElementViewportPosition(mainRef);
     const [carouselEndPosition, setCarouselEndPosition] = useState(0);
+    const [spacerHeight, setSpacerHeight] = useState<number | null>(null);
+    const { position } = useElementViewportPosition(mainRef, pinRef, spacerHeight);
     const { scrollYProgress } = useScroll();
     const prefersReducedMotion = useReducedMotion();
 
     // Transform scroll progress to horizontal position
     const x = useTransform(scrollYProgress, position, [0, carouselEndPosition]);
 
-    // Calculate how far the carousel needs to move
+    // Same range, normalised — drives the run meter under the carousel
+    const progress = useTransform(scrollYProgress, position, [0, 1]);
+
+    // Calculate how far the carousel needs to move, and buy exactly that much
+    // scroll for it.
     useEffect(() => {
         if (!carouselRef.current) return;
 
-        const parent = carouselRef.current.parentElement;
-        const scrollbarWidth = window.innerWidth - document.documentElement.clientWidth;
-
         const calculateEndPosition = () => {
-            if (carouselRef.current && parent) {
-                const carouselWidth = carouselRef.current.scrollWidth;
-                const viewportWidth = window.innerWidth;
-                const parentOffset = (parent as HTMLElement).offsetLeft;
+            if (!carouselRef.current) return;
 
-                // End position = how far left we need to scroll to see the last card
-                const endPosition = carouselWidth - viewportWidth + scrollbarWidth + parentOffset * 2;
-                setCarouselEndPosition(-endPosition);
-            }
+            const carouselWidth = carouselRef.current.scrollWidth;
+
+            // Travel = how far left the row must move for card 05 to land at the
+            // right edge. The row is 1808px wide (5 × 320 + 4 × 40 gap + 2 × 24
+            // padding), so at a content width of 1808px and up this goes negative
+            // — which would translate the row RIGHT and push every card
+            // off-screen. There is nothing to reveal then, so clamp it to 0.
+            const travel = Math.max(0, carouselWidth - document.documentElement.clientWidth);
+            setCarouselEndPosition(-travel);
+
+            // The spacer is the pin plus exactly the travel, so one pixel of
+            // scroll buys one pixel of motion. When the travel is 0 it collapses
+            // to the pin height and the section stops charging scroll for a row
+            // that never moves.
+            setSpacerHeight((pinRef.current?.offsetHeight ?? window.innerHeight) + travel);
         };
 
         calculateEndPosition();
@@ -170,19 +218,19 @@ export default function HorizontalScrollCarousel() {
         return () => window.removeEventListener('resize', handleResize);
     }, []);
 
-    // Reduced motion: no scroll-jack, no 300vh spacer — a plain scrollable row.
+    // Reduced motion: no scroll-jack, no spacer — a plain scrollable row.
     if (prefersReducedMotion) {
         return (
-            <section ref={mainRef} aria-labelledby="how-it-works-heading" className="section bg-paper">
+            <section ref={mainRef} aria-labelledby="how-it-works-heading" className="section bg-canvas">
                 <SectionHeader />
-                <div className="mt-10 overflow-x-auto">
+                <div className="mt-6 overflow-x-auto">
                     <ol className="flex w-max gap-10 px-6">
                         {STEPS.map((step) => (
                             <StepCard key={step.number} step={step} />
                         ))}
                     </ol>
                 </div>
-                <div className="mt-10">
+                <div className="mt-6">
                     <ScrollIndicator />
                 </div>
             </section>
@@ -190,21 +238,47 @@ export default function HorizontalScrollCarousel() {
     }
 
     return (
-        <section ref={mainRef} aria-labelledby="how-it-works-heading" className="bg-paper">
-            {/* Container with scroll height - this creates the scroll distance */}
-            <div className="w-full mx-auto" style={{ height: '300vh' }}>
-                {/* Sticky container - stays in view while scrolling */}
-                <div className="sticky top-0 flex h-screen w-full flex-col justify-center gap-10 overflow-hidden bg-paper">
-                    <SectionHeader />
+        <section ref={mainRef} aria-labelledby="how-it-works-heading" className="bg-canvas">
+            {/* Container with scroll height — this creates the scroll distance.
+                Measured, not a constant: see calculateEndPosition. 100vh until
+                it is measured, which is the no-travel case. */}
+            <div
+                className="w-full"
+                style={{ height: spacerHeight === null ? '100vh' : `${spacerHeight}px` }}
+            >
+                {/* Sticky container - stays in view while scrolling.
+                    Viewport-tall, so centring the group centres it against what
+                    the viewer actually sees and no bare spacer is ever exposed
+                    below it. The padding is the floor on the breathing room. */}
+                <div
+                    ref={pinRef}
+                    className="sticky top-0 flex min-h-screen w-full flex-col justify-center overflow-hidden bg-canvas py-[clamp(48px,8vh,96px)]"
+                >
+                    {/* 1808px is the row's own width. Capping the group there and
+                        centring it holds the heading flush to card 01 at every
+                        width while stopping the section from hugging the left
+                        edge on displays wider than the row. Below 1808px it is a
+                        no-op. */}
+                    <div className="mx-auto flex w-full max-w-[1808px] flex-col">
+                        <SectionHeader />
 
-                    {/* Horizontal Carousel */}
-                    <motion.ol ref={carouselRef} className="flex w-max gap-10 px-6" style={{ x }}>
-                        {STEPS.map((step) => (
-                            <StepCard key={step.number} step={step} />
-                        ))}
-                    </motion.ol>
+                        {/* Horizontal Carousel */}
+                        <motion.ol
+                            ref={carouselRef}
+                            className="mt-10 flex w-max gap-10 px-6"
+                            style={{ x }}
+                        >
+                            {STEPS.map((step) => (
+                                <StepCard key={step.number} step={step} />
+                            ))}
+                        </motion.ol>
 
-                    <ScrollIndicator />
+                        {/* 16px, against the header's 40px: the indicator is chrome
+                            attached to the row, not a third peer block. */}
+                        <div className="mt-4">
+                            <ScrollIndicator progress={progress} />
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>

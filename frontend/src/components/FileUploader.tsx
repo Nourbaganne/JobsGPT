@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Upload, X } from "lucide-react";
+import { FileText, Upload, X } from "lucide-react";
 
 export default function FileUploader() {
     const [file, setFile] = useState<File | null>(null);
@@ -40,72 +40,65 @@ export default function FileUploader() {
     };
 
     return (
-        <div className="space-y-4">
-            <div className="mt-1 flex justify-center px-6 pt-10 pb-10 border-2 border-[#b8c5d6] border-dashed rounded-2xl hover:border-[#5b6fa3] transition-all duration-200 bg-[#e8eef5]/50 hover:bg-[#b8c5d6]/20">
-                <div className="space-y-3 text-center">
-                    {file ? (
-                        <div className="flex flex-col items-center space-y-3">
-                            <div className="flex items-center space-x-3 bg-white px-4 py-3 rounded-lg shadow-sm border border-[#b8c5d6]">
-                                <svg className="h-8 w-8 text-[#5b6fa3]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                </svg>
-                                <span className="text-sm font-medium text-[#22223b] max-w-xs truncate">{file.name}</span>
-                                <button
-                                    type="button"
-                                    onClick={() => setFile(null)}
-                                    className="text-[#5b6fa3] hover:text-red-500 transition-colors"
-                                >
-                                    <X className="h-5 w-5" />
-                                </button>
-                            </div>
-                            <button
-                                onClick={handleUpload}
-                                disabled={uploading}
-                                className="inline-flex items-center justify-center px-6 py-3 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-[#22223b] hover:bg-[#2d3047] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5b6fa3] disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-                            >
-                                {uploading ? (
-                                    <>
-                                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                        </svg>
-                                        Uploading...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Upload className="mr-2 h-5 w-5" />
-                                        Upload Resume
-                                    </>
-                                )}
-                            </button>
-                        </div>
-                    ) : (
-                        <>
-                            <div className="mx-auto h-16 w-16 bg-[#b8c5d6] rounded-full flex items-center justify-center">
-                                <Upload className="h-8 w-8 text-[#22223b]" />
-                            </div>
-                            <div className="flex flex-col items-center text-sm text-[#4a4e69] space-y-1">
-                                <label
-                                    htmlFor="file-upload"
-                                    className="relative cursor-pointer rounded-lg font-medium text-[#5b6fa3] hover:text-[#22223b] focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-[#5b6fa3] transition-colors"
-                                >
-                                    <span className="underline">Click to upload</span>
-                                    <input
-                                        id="file-upload"
-                                        name="file-upload"
-                                        type="file"
-                                        accept=".pdf"
-                                        className="sr-only"
-                                        onChange={handleFileChange}
-                                    />
-                                </label>
-                                <p className="text-[#5b6fa3]/70">or drag and drop</p>
-                            </div>
-                            <p className="text-xs text-[#5b6fa3]/70">PDF up to 10MB</p>
-                        </>
-                    )}
+        <div>
+            {file ? (
+                /* Staged file — a record row, then the one action on it. */
+                <div className="panel overflow-hidden">
+                    <div className="panel__row">
+                        <FileText className="h-4 w-4 shrink-0 text-dim" strokeWidth={1.5} aria-hidden="true" />
+                        <span className="text-body-sm min-w-0 flex-1 truncate text-ink">{file.name}</span>
+                        <button
+                            type="button"
+                            onClick={() => setFile(null)}
+                            className="btn btn--ghost shrink-0 p-0"
+                            aria-label="Remove file"
+                        >
+                            <X className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                        </button>
+                    </div>
+                    <div className="flex justify-end border-t border-line px-4 py-2">
+                        <button
+                            onClick={handleUpload}
+                            disabled={uploading}
+                            className="btn btn--primary"
+                        >
+                            {uploading ? (
+                                <>
+                                    <span className="spinner" aria-hidden="true" />
+                                    Uploading...
+                                </>
+                            ) : (
+                                <>
+                                    <Upload className="h-4 w-4" strokeWidth={1.5} aria-hidden="true" />
+                                    Upload Resume
+                                </>
+                            )}
+                        </button>
+                    </div>
                 </div>
-            </div>
+            ) : (
+                <div className="empty-state">
+                    <Upload className="h-6 w-6 text-dim" strokeWidth={1.5} aria-hidden="true" />
+                    <p className="text-body-sm max-w-[42ch] text-muted">
+                        No resume on file. Matching stays off until one is uploaded.
+                    </p>
+                    <label
+                        htmlFor="file-upload"
+                        className="btn btn--secondary focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-azure"
+                    >
+                        Choose a file
+                        <input
+                            id="file-upload"
+                            name="file-upload"
+                            type="file"
+                            accept=".pdf"
+                            className="sr-only"
+                            onChange={handleFileChange}
+                        />
+                    </label>
+                    <p className="eyebrow text-dim">PDF · 10MB MAX</p>
+                </div>
+            )}
         </div>
     );
 }
