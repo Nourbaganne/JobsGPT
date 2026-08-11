@@ -1,13 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import Wordmark from "@/components/Wordmark";
+
+type LenisInstance = {
+    scrollTo: (
+        target: Element | string | number,
+        options?: { offset?: number; duration?: number }
+    ) => void;
+};
+
+/* Hover only where hovering is real; every hover changes 2 properties
+   (colour + text-decoration-line). Neutral throughout — the only azure is the
+   keyboard ring, which is action-coded and costs nothing from the viewport
+   hue budget because it exists solely on focus. */
+const linkClass =
+    "text-body-sm text-muted no-underline transition-colors " +
+    "[@media(hover:hover)_and_(pointer:fine)]:hover:text-ink " +
+    "[@media(hover:hover)_and_(pointer:fine)]:hover:underline " +
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+
+const pageLinks = [
+    { href: "#how-it-works", label: "How it works" },
+    { href: "#features", label: "Features" },
+    { href: "#pricing", label: "Pricing" },
+    { href: "#faq", label: "FAQ" },
+];
 
 export default function HomeFooter() {
-    const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    const handleSmoothScroll = (
+        e: React.MouseEvent<HTMLAnchorElement>,
+        href: string
+    ) => {
         e.preventDefault();
         const element = document.querySelector(href);
         if (element) {
-            const lenis = (window as any).lenis;
+            const lenis = (window as Window & { lenis?: LenisInstance }).lenis;
             if (lenis) {
                 lenis.scrollTo(element, { offset: -80, duration: 1.5 });
             } else {
@@ -17,152 +45,100 @@ export default function HomeFooter() {
     };
 
     return (
-        <footer className="bg-[#22223b] text-gray-300">
-            <div className="max-w-7xl mx-auto py-16 px-4 sm:px-6 lg:px-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-                    {/* Column 1 - Company Info */}
-                    <div className="space-y-4">
-                        <img 
-                            src="/logo.png" 
-                            alt="JobsGPT" 
-                            className="h-24 w-auto object-contain"
-                        />
-                        <p className="text-sm text-gray-400 leading-relaxed">
-                            JobsGPT revolutionizes job searching with AI-powered matching, automated discovery, and seamless candidate experiences. Perfect for job seekers looking to modernize their search and find opportunities faster.
-                        </p>
-                        <div className="flex items-center space-x-4">
-                            <a href="#" className="w-8 h-8 bg-[#5b6fa3] rounded-full flex items-center justify-center hover:bg-[#6b7db3] transition-colors">
-                                <span className="text-white text-xs font-bold">f</span>
-                            </a>
-                            <a href="#" className="w-8 h-8 bg-[#5b6fa3] rounded-full flex items-center justify-center hover:bg-[#6b7db3] transition-colors">
-                                <span className="text-white text-xs font-bold">in</span>
-                            </a>
-                        </div>
-                        <p className="text-xs text-gray-500">
-                            © {new Date().getFullYear()} JobsGPT. All rights reserved.
+        /* Canvas, not surface: the footer is terminal, so it takes the single
+           top rule rather than a .band. No hue anywhere below this line. */
+        <footer className="bg-canvas text-ink border-t border-line">
+            <div className="container-content section--tight">
+                <div className="grid grid-cols-2 gap-10 lg:grid-cols-4">
+                    {/* 1 — wordmark */}
+                    <div className="col-span-2 flex flex-col gap-6 lg:col-span-1">
+                        {/* The penguin is retired: a cartoon mascot has nothing to
+                            do with a lookout who sees through walls, and the
+                            wordmark already carries the idea. */}
+                        <Wordmark className="text-[26px] text-ink" />
+                        <p className="text-body-sm text-muted max-w-[42ch]">
+                            Continuous board scanning, resume-scored matching, drafted
+                            outreach.
                         </p>
                     </div>
 
-                    {/* Column 2 - Quick Links */}
-                    <div>
-                        <h4 className="text-base font-semibold text-white mb-4">Quick Links</h4>
-                        <ul className="space-y-3">
-                            <li>
-                                <a 
-                                    href="#home" 
-                                    onClick={(e) => handleSmoothScroll(e, "#home")} 
-                                    className="text-sm text-gray-400 hover:text-white transition-colors flex items-center"
-                                >
-                                    <span className="mr-2">&gt;</span>
-                                    Get Started
-                                </a>
-                            </li>
-                            <li>
-                                <a 
-                                    href="#features" 
-                                    onClick={(e) => handleSmoothScroll(e, "#features")} 
-                                    className="text-sm text-gray-400 hover:text-white transition-colors flex items-center"
-                                >
-                                    <span className="mr-2">&gt;</span>
-                                    Features
-                                </a>
-                            </li>
-                            <li>
-                                <a 
-                                    href="#how-it-works" 
-                                    onClick={(e) => handleSmoothScroll(e, "#how-it-works")} 
-                                    className="text-sm text-gray-400 hover:text-white transition-colors flex items-center"
-                                >
-                                    <span className="mr-2">&gt;</span>
-                                    Live Demo
-                                </a>
-                            </li>
+                    {/* 2 — in-page anchors */}
+                    <nav aria-label="Page sections">
+                        <h2 className="eyebrow text-ink mb-6">On this page</h2>
+                        <ul className="space-y-4">
+                            {pageLinks.map((link) => (
+                                <li key={link.href}>
+                                    <a
+                                        href={link.href}
+                                        onClick={(e) => handleSmoothScroll(e, link.href)}
+                                        className={linkClass}
+                                    >
+                                        {link.label}
+                                    </a>
+                                </li>
+                            ))}
                         </ul>
-                    </div>
+                    </nav>
 
-                    {/* Column 3 - Resources */}
-                    <div>
-                        <h4 className="text-base font-semibold text-white mb-4">Resources</h4>
-                        <ul className="space-y-3">
-                            <li>
-                                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors flex items-center">
-                                    <span className="mr-2">&gt;</span>
-                                    Help Center
-                                </a>
-                            </li>
-                            <li>
-                                <a href="#" className="text-sm text-gray-400 hover:text-white transition-colors flex items-center">
-                                    <span className="mr-2">&gt;</span>
-                                    Blog
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-
-                    {/* Column 4 - Get in Touch */}
-                    <div>
-                        <h4 className="text-base font-semibold text-white mb-4">Get in Touch</h4>
+                    {/* 3 — account */}
+                    <nav aria-label="Account">
+                        <h2 className="eyebrow text-ink mb-6">Account</h2>
                         <ul className="space-y-4">
                             <li>
-                                <div className="flex items-start space-x-3">
-                                    <svg className="w-5 h-5 text-[#5b6fa3] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                    </svg>
-                                    <div>
-                                        <p className="text-sm text-gray-400">support@jobsgpt.com</p>
-                                        <p className="text-xs text-gray-500 mt-1">24/7 Support Available</p>
-                                    </div>
-                                </div>
+                                <Link href="/auth/register" className={linkClass}>
+                                    Start free
+                                </Link>
                             </li>
                             <li>
-                                <div className="flex items-start space-x-3">
-                                    <svg className="w-5 h-5 text-[#5b6fa3] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                                    </svg>
-                                    <div>
-                                        <p className="text-sm text-gray-400">+1 (555) 123-4567</p>
-                                        <p className="text-xs text-gray-500 mt-1">Mon-Fri 9AM-6PM EST</p>
-                                    </div>
-                                </div>
+                                <Link href="/auth/login" className={linkClass}>
+                                    Sign in
+                                </Link>
                             </li>
+                        </ul>
+                    </nav>
+
+                    {/* 4 — contact */}
+                    <div>
+                        <h2 className="eyebrow text-ink mb-6">Contact</h2>
+                        <ul className="space-y-4">
                             <li>
-                                <div className="flex items-start space-x-3">
-                                    <svg className="w-5 h-5 text-[#5b6fa3] mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <div>
-                                        <p className="text-sm text-gray-400">Available Worldwide</p>
-                                        <p className="text-xs text-gray-500 mt-1">Cloud-based platform</p>
-                                    </div>
-                                </div>
+                                <a
+                                    href="mailto:support@lynceus.com"
+                                    className={linkClass}
+                                >
+                                    support@lynceus.com
+                                </a>
                             </li>
                         </ul>
                     </div>
                 </div>
 
-                {/* Bottom Footer Links */}
-                <div className="border-t border-[#5b6fa3]/50 pt-6">
-                    <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-                        <img 
-                            src="/logo.png" 
-                            alt="JobsGPT" 
-                            className="h-16 w-auto object-contain"
-                        />
-                        <div className="flex flex-wrap justify-center md:justify-end items-center space-x-6 text-sm">
-                            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                                Privacy Policy
-                            </a>
-                            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                                Terms of Service
-                            </a>
-                            <a href="#" className="text-gray-400 hover:text-white transition-colors">
-                                Cookie Policy
-                            </a>
-                        </div>
-                    </div>
+                {/* bottom rule — mt-10 is a real block boundary and stays; the 40px
+                    below it was craft-register dead air for one line of legal text. */}
+                <div className="mt-10 flex flex-col gap-6 border-t border-line pt-6 md:flex-row md:items-center md:justify-between">
+                    <p className="tabular text-body-sm text-dim">
+                        © {new Date().getFullYear()} Lynceus. All rights reserved.
+                    </p>
+                    <nav aria-label="Legal">
+                        <ul className="flex items-center gap-6">
+                            <li>
+                                <Link href="/privacy" className={linkClass}>
+                                    Privacy
+                                </Link>
+                            </li>
+                            <li>
+                                <Link href="/terms" className={linkClass}>
+                                    Terms
+                                </Link>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
+
+                <p className="postscript mt-6">
+                    BUILT BY PEOPLE WHO HATED APPLYING TO JOBS
+                </p>
             </div>
         </footer>
     );
 }
-

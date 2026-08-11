@@ -3,9 +3,14 @@
 import Link from "next/link";
 import { useState } from "react";
 import { LogOut } from "lucide-react";
-import Image from "next/image";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
+import Wordmark from "@/components/Wordmark";
+
+/* Same ring the landing nav uses on its anchors. `.btn` carries its own
+   focus-visible outline, so only the logo link needs this. */
+const FOCUS_RING =
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
 
 export default function Navbar() {
     const { user, logout } = useAuth();
@@ -19,31 +24,51 @@ export default function Navbar() {
     };
 
     return (
-        <nav className="bg-white/80 backdrop-blur-md shadow-sm border-b border-[#b8c5d6]/30 sticky top-0 z-50">
-            <div className="mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between h-16">
-                    <div className="flex items-center">
-                        <Link href="/dashboard" className="shrink-0 group">
-                            <Image
-                                width={75}
-                                height={16}
-                                src="/logo.png" 
-                                alt="JobsGPT" 
-                                className="object-contain group-hover:scale-105 transition-transform duration-300"
-                            />
-                        </Link>
-                    </div>
-                    <div className="flex items-center space-x-4 sm:space-x-6">
-                        <div className="hidden sm:flex items-center px-3 py-1.5 bg-[#e8eef5] rounded-lg">
-                            <span className="text-sm text-[#4a4e69] font-medium truncate max-w-xs">{user?.email}</span>
-                        </div>
+        /* Veil + blur, no shadow: the bar is separated from what scrolls under it
+           by the hairline alone, exactly as on the landing page. */
+        <nav
+            aria-label="Dashboard"
+            className="sticky top-0 z-50 border-b border-line bg-canvas/80"
+            style={{
+                backdropFilter: "blur(var(--nav-blur))",
+                WebkitBackdropFilter: "blur(var(--nav-blur))",
+            }}
+        >
+            <div className="px-6">
+                <div className="flex h-[var(--nav-height)] items-center justify-between gap-6">
+                    <Link
+                        href="/dashboard"
+                        aria-label="Lynceus — dashboard"
+                        className={`flex shrink-0 items-center ${FOCUS_RING}`}
+                    >
+                        <Wordmark className="text-[20px] text-ink" />
+                    </Link>
+
+                    <div className="flex items-center gap-4">
+                        {/* The address is data, not a label, so the chip's uppercase
+                            and tracking are dropped and it reads verbatim. Neutral:
+                            an account identifier is not one of the four states. */}
+                        <span className="chip hidden max-w-[32ch] normal-case tracking-normal sm:inline-flex">
+                            <span className="truncate">{user?.email}</span>
+                        </span>
+
                         <button
                             onClick={handleLogout}
                             disabled={loading}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#4a4e69] bg-white border-2 border-[#b8c5d6] rounded-xl hover:bg-[#e8eef5] hover:border-[#5b6fa3] hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5b6fa3] transition-all duration-200 disabled:opacity-50"
+                            className="btn btn--secondary"
                         >
-                            <LogOut className="h-4 w-4" />
-                            <span className="hidden sm:inline">{loading ? "Signing out..." : "Logout"}</span>
+                            {loading ? (
+                                <span className="spinner" aria-hidden="true" />
+                            ) : (
+                                <LogOut
+                                    className="h-4 w-4"
+                                    strokeWidth={1.5}
+                                    aria-hidden="true"
+                                />
+                            )}
+                            <span className="hidden sm:inline">
+                                {loading ? "Signing out..." : "Logout"}
+                            </span>
                         </button>
                     </div>
                 </div>

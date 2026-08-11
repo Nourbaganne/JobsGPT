@@ -28,7 +28,6 @@ export default function AnimatedCounter({
             hasAnimated.current = true;
             
             const startTime = Date.now();
-            const endTime = startTime + duration * 1000;
 
             const animate = () => {
                 const now = Date.now();

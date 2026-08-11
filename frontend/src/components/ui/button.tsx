@@ -21,20 +21,24 @@ type ButtonAsLink = BaseButtonProps &
 
 export type ButtonProps = ButtonAsButton | ButtonAsLink;
 
-const baseStyles = "inline-flex items-center justify-center rounded-xl font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4a4e69] focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50";
+/* Geometry and focus only. Colour, weight, transition and the hover states all
+   come from the .btn* primitives below, which already gate their hovers behind
+   (hover:hover) and (pointer:fine) — re-declaring them as `hover:` utilities
+   here would fire on touch. */
+const baseStyles = "inline-flex items-center justify-center gap-2 rounded-[var(--radius)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-azure disabled:pointer-events-none disabled:opacity-50";
 
 const variants = {
-  default: "bg-gradient-to-r from-[#4a4e69] to-[#9a8c98] text-white hover:from-[#22223b] hover:to-[#4a4e69] shadow-md hover:shadow-lg",
-  outline: "border-2 border-[#4a4e69] text-[#4a4e69] bg-transparent hover:bg-[#f2e9e4]",
-  ghost: "text-[#4a4e69] hover:bg-[#f2e9e4]",
-  secondary: "bg-[#f2e9e4] text-[#22223b] hover:bg-[#c9ada7]",
+  default: "btn btn--primary",
+  outline: "btn btn--secondary",
+  ghost: "btn btn--ghost",
+  secondary: "btn btn--secondary",
 };
 
 const sizes = {
   default: "h-10 px-4 py-2",
-  sm: "h-9 px-3 text-sm",
-  lg: "h-11 px-8",
-  icon: "h-10 w-10",
+  sm: "h-8 px-2 text-body-sm",
+  lg: "h-12 px-6 text-body",
+  icon: "h-10 w-10 p-0",
 };
 
 const Button = React.forwardRef<HTMLButtonElement | HTMLAnchorElement, ButtonProps>(

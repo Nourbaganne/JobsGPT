@@ -2,8 +2,25 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Mail, ArrowRight, ArrowLeft, CheckCircle } from "lucide-react";
+import { Mail } from "lucide-react";
 import { api } from "@/lib/api";
+
+/* Single-column auth shell — wordmark, then one panel. Same surface ladder as
+   the landing page: canvas behind, panel in front, hairlines instead of shadow. */
+function AuthShell({ children }: { children: React.ReactNode }) {
+    return (
+        <main className="flex min-h-screen items-center justify-center bg-canvas py-10">
+            <div className="container-prose">
+                <div className="mx-auto w-full max-w-[440px]">
+                    <Link href="/" className="display text-h3 inline-block text-ink">
+                        Lynceus
+                    </Link>
+                    <div className="mt-6">{children}</div>
+                </div>
+            </div>
+        </main>
+    );
+}
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState("");
@@ -32,87 +49,92 @@ export default function ForgotPasswordPage() {
         setLoading(false);
     };
 
+    /* Hues here: mint reports the send, azure carries the one link worth
+       clicking. Nothing else is tinted. */
     if (success) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#e8eef5] p-6">
-                <div className="w-full max-w-md">
-                    <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-10 border border-[#c9ada7]/20 text-center">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <CheckCircle className="h-8 w-8 text-green-600" />
+            <AuthShell>
+                <div className="panel overflow-hidden">
+                    <div className="panel__header">
+                        <span>PASSWORD RESET</span>
+                        <span className="chip chip--live">SENT</span>
+                    </div>
+
+                    <div className="panel__body">
+                        <h1 className="display text-h3 text-ink">Check your email</h1>
+
+                        <div className="alert alert--ok mt-4" role="status">
+                            <span>
+                                If an account exists with {email}, you will receive a password reset
+                                link.
+                            </span>
                         </div>
-                        <h2 className="text-2xl font-bold text-[#22223b] mb-2">Check Your Email</h2>
-                        <p className="text-[#4a4e69] mb-6">
-                            If an account exists with {email}, you will receive a password reset link.
-                        </p>
-                        
+
                         {resetUrl && (
-                            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-left">
-                                <p className="text-sm text-blue-700 font-medium mb-2">Development Mode - Reset URL:</p>
-                                <a 
-                                    href={resetUrl} 
-                                    className="text-sm text-blue-600 break-all hover:underline"
+                            <div className="mt-4 rounded-[var(--radius)] border border-line bg-canvas p-4">
+                                <p className="eyebrow">DEVELOPMENT MODE · RESET URL</p>
+                                <a
+                                    href={resetUrl}
+                                    className="font-mono text-body-sm mt-2 block break-all text-azure"
                                 >
                                     {resetUrl}
                                 </a>
                             </div>
                         )}
+                    </div>
 
-                        <Link
-                            href="/auth/login"
-                            className="inline-flex items-center gap-2 text-[#4a4e69] hover:text-[#22223b] font-medium"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            Back to Login
+                    <div className="border-t border-line bg-panel-2 px-6 py-4">
+                        <Link href="/auth/login" className="cta cta--ghost">
+                            <span className="font-mono" aria-hidden="true">
+                                ←
+                            </span>
+                            Back to login
                         </Link>
                     </div>
                 </div>
-            </div>
+            </AuthShell>
         );
     }
 
+    /* Hue: azure only — the submit and the sign-in link are the actions. */
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#e8eef5] p-6">
-            <div className="w-full max-w-md">
-                <div className="lg:hidden flex justify-center mb-8">
-                    <Link href="/">
-                        <img 
-                            src="/logo.png" 
-                            alt="JobsGPT" 
-                            className="h-32 w-auto object-contain"
-                        />
-                    </Link>
+        <AuthShell>
+            <div className="panel overflow-hidden">
+                <div className="panel__header">
+                    <span>PASSWORD RESET</span>
                 </div>
 
-                <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-10 border border-[#c9ada7]/20">
-                    <div className="text-center mb-8">
-                        <h2 className="text-2xl sm:text-3xl font-bold text-[#22223b]">
-                            Forgot Password?
-                        </h2>
-                        <p className="mt-2 text-[#4a4e69]">
-                            Enter your email and we&apos;ll send you a reset link
-                        </p>
-                    </div>
+                <div className="panel__body">
+                    <h1 className="display text-h3 text-ink">Forgot your password?</h1>
+                    <p className="text-body-sm mt-2 text-muted">
+                        Enter your email and we&apos;ll send a reset link.
+                    </p>
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium text-[#22223b] mb-2">
-                                Email Address
+                    <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                        <div className="field">
+                            <label htmlFor="email" className="label">
+                                Email address
                             </label>
                             <div className="relative">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9a8c98]" />
+                                <Mail
+                                    aria-hidden="true"
+                                    strokeWidth={1.5}
+                                    className="field__affix field__affix--left h-4 w-4"
+                                />
                                 <input
+                                    id="email"
                                     type="email"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     placeholder="john@example.com"
-                                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-[#c9ada7]/50 focus:border-[#4a4e69] focus:ring-2 focus:ring-[#4a4e69]/20 outline-none transition-all text-[#22223b] placeholder:text-[#9a8c98]"
+                                    className="input input--has-icon"
                                     required
                                 />
                             </div>
                         </div>
 
                         {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                            <div className="alert alert--error" role="alert">
                                 {error}
                             </div>
                         )}
@@ -120,33 +142,27 @@ export default function ForgotPasswordPage() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-[#22223b] text-white py-3.5 rounded-xl font-semibold hover:bg-[#2d3047] transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50"
+                            className="btn btn--primary btn--block"
                         >
                             {loading ? (
-                                <span className="flex items-center gap-2">
-                                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                    </svg>
-                                    Sending...
-                                </span>
-                            ) : (
                                 <>
-                                    Send Reset Link
-                                    <ArrowRight className="h-5 w-5" />
+                                    <span className="spinner" aria-hidden="true" />
+                                    Sending
                                 </>
+                            ) : (
+                                "Send reset link"
                             )}
                         </button>
-
-                        <p className="text-center text-[#4a4e69] mt-6">
-                            Remember your password?{" "}
-                            <Link href="/auth/login" className="text-[#4a4e69] font-semibold hover:text-[#22223b]">
-                                Sign in
-                            </Link>
-                        </p>
                     </form>
                 </div>
+
+                <p className="text-body-sm border-t border-line bg-panel-2 px-6 py-4 text-muted">
+                    Remember your password?{" "}
+                    <Link href="/auth/login" className="text-azure">
+                        Sign in
+                    </Link>
+                </p>
             </div>
-        </div>
+        </AuthShell>
     );
 }

@@ -1,5 +1,3 @@
-import { ExternalLink, MapPin, Building2, Calendar } from "lucide-react";
-
 export interface Job {
     id: number;
     title: string;
@@ -11,56 +9,51 @@ export interface Job {
     createdAt: Date | string;
 }
 
+/* Score is the only hue this card spends: mint once a match clears 80, amber
+   while it sits in the 50–79 band, neutral below. Everything else — company,
+   location, date, the footer action — reads in the surface palette, so a wall
+   of cards colours only where the number means something. */
+function scoreClass(score: number): string {
+    if (score >= 80) return "score score--high";
+    if (score >= 50) return "score score--mid";
+    return "score";
+}
+
 export default function JobCard({ job }: { job: Job }) {
     return (
-        <div className="bg-white overflow-hidden shadow-lg rounded-2xl border border-[#b8c5d6]/30 hover:shadow-2xl hover:border-[#5b6fa3] transition-all duration-300 group hover:-translate-y-1">
-            <div className="px-6 py-6">
-                <div className="flex justify-between items-start mb-5">
-                    <div className="flex-1 min-w-0 pr-3">
-                        <h3 className="text-lg font-bold leading-6 text-[#22223b] group-hover:text-[#4a4e69] transition-colors line-clamp-2">
-                            {job.title}
-                        </h3>
-                        <div className="mt-2.5 flex items-center text-sm text-[#4a4e69]">
-                            <Building2 className="flex-shrink-0 mr-2 h-4 w-4 text-[#5b6fa3]" />
-                            <span className="truncate font-medium">{job.company}</span>
-                        </div>
-                    </div>
-                    {job.score !== null && job.score !== undefined && (
-                        <span className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-bold flex-shrink-0 shadow-sm ${
-                            job.score >= 80 
-                                ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-2 border-green-300' 
-                                : job.score >= 50 
-                                    ? 'bg-gradient-to-r from-yellow-100 to-amber-100 text-yellow-800 border-2 border-yellow-300'
-                                    : 'bg-[#e8eef5] text-[#4a4e69] border-2 border-[#b8c5d6]'
-                        }`}>
-                            {job.score}% match
-                        </span>
-                    )}
-                </div>
-                
-                <div className="mt-5 space-y-2.5">
-                    <div className="flex items-center text-sm text-[#4a4e69]">
-                        <MapPin className="flex-shrink-0 mr-2 h-4 w-4 text-[#5b6fa3]" />
-                        <span className="truncate">{job.location || "Remote"}</span>
-                    </div>
-                    <div className="flex items-center text-sm text-[#4a4e69]">
-                        <Calendar className="flex-shrink-0 mr-2 h-4 w-4 text-[#5b6fa3]" />
-                        <span>{new Date(job.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
-                    </div>
-                </div>
-                
-                <div className="mt-6 pt-5 border-t border-[#b8c5d6]/30">
+        <article className="panel flex h-full flex-col overflow-hidden">
+            <div className="panel__header">
+                <span className="min-w-0 truncate">{job.company}</span>
+                {job.score !== null && job.score !== undefined && (
+                    <span className={scoreClass(job.score)}>{job.score}% MATCH</span>
+                )}
+            </div>
+
+            <div className="panel__body flex flex-1 flex-col">
+                <h3 className="display text-h3 line-clamp-2 text-ink">{job.title}</h3>
+
+                <p className="eyebrow tabular mt-2 text-dim">
+                    {job.location || "Remote"}
+                    <span className="mx-2" aria-hidden="true">
+                        ·
+                    </span>
+                    {new Date(job.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                </p>
+
+                <div className="mt-6 flex flex-1 items-end">
                     <a
                         href={job.url || "#"}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center justify-center w-full px-4 py-3 border border-transparent text-sm font-semibold rounded-xl text-white bg-[#22223b] hover:bg-[#2d3047] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#5b6fa3] transition-all duration-200 shadow-md hover:shadow-lg hover:scale-[1.02]"
+                        className="cta cta--secondary w-full justify-center"
                     >
-                        View Job
-                        <ExternalLink className="ml-2 h-4 w-4" />
+                        View job
+                        <span className="font-mono" aria-hidden="true">
+                            →
+                        </span>
                     </a>
                 </div>
             </div>
-        </div>
+        </article>
     );
 }

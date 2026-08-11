@@ -1,202 +1,249 @@
 "use client";
 
 import Link from "next/link";
-import { Menu, X, ArrowRight, Globe } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Menu, X } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { useLenis } from "lenis/react";
 import { useAuth } from "@/hooks/useAuth";
+import Wordmark from "@/components/Wordmark";
+
+/** Fixed bar is 64px (--nav-height) + 16px of air on scroll-to. Ladder value. */
+const NAV_OFFSET = 80;
+
+/** Anchor list per spec §6. ids are owned by page.tsx. */
+const NAV_LINKS = [
+    { id: "how-it-works", label: "HOW IT WORKS" },
+    { id: "features", label: "FEATURES" },
+    { id: "pricing", label: "PRICING" },
+    { id: "faq", label: "FAQ" },
+] as const;
+
+/** Keyboard ring, matched to HomeFooter. Only azure in the file, and it is
+    action-coded by definition — it exists solely on focus, so it never spends
+    from the 2-hue viewport budget. */
+const FOCUS_RING =
+    "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent";
+
+/** Minimal shape of the Lenis instance some setups park on `window`. */
+type LenisLike = {
+    scrollTo: (
+        target: HTMLElement,
+        options?: { offset?: number; duration?: number }
+    ) => void;
+};
 
 export default function HomeNavbar() {
     const { isAuthenticated } = useAuth();
+    const lenis = useLenis();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [scrolled, setScrolled] = useState(false);
-    const [activeSection, setActiveSection] = useState("home");
+    const [activeSection, setActiveSection] = useState("");
 
+    // Bottom rule appears only once scrolled; active anchor gets the ink underline.
     useEffect(() => {
         const handleScroll = () => {
-            setScrolled(window.scrollY > 20);
-            
-            // Update active section based on scroll position
-            const sections = ['home', 'features', 'how-it-works'];
-            const scrollPosition = window.scrollY + 100;
-            
-            for (const section of sections) {
-                const element = document.getElementById(section);
-                if (element) {
-                    const offsetTop = element.offsetTop;
-                    const offsetBottom = offsetTop + element.offsetHeight;
-                    if (scrollPosition >= offsetTop && scrollPosition < offsetBottom) {
-                        setActiveSection(section);
-                        break;
-                    }
+            setScrolled(window.scrollY > 16);
+
+            const probe = window.scrollY + NAV_OFFSET + 24;
+            let current = "";
+            for (const { id } of NAV_LINKS) {
+                const element = document.getElementById(id);
+                if (!element) continue;
+                const rect = element.getBoundingClientRect();
+                const top = rect.top + window.scrollY;
+                if (probe >= top && probe < top + rect.height) {
+                    current = id;
+                    break;
                 }
             }
+            setActiveSection(current);
         };
-        window.addEventListener("scroll", handleScroll);
+
+        handleScroll();
+        window.addEventListener("scroll", handleScroll, { passive: true });
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    const handleSmoothScroll = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
-        e.preventDefault();
-        setMobileMenuOpen(false);
-        const element = document.querySelector(href);
-        if (element) {
-            const lenis = (window as any).lenis;
-            if (lenis) {
-                lenis.scrollTo(element, { offset: -80, duration: 1.5 });
-            } else {
-                element.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
-        }
-    };
+    const closeMenu = useCallback(() => setMobileMenuOpen(false), []);
 
+    const handleSmoothScroll = useCallback(
+        (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+            e.preventDefault();
+            setMobileMenuOpen(false);
+
+            const element = document.querySelector<HTMLElement>(href);
+            if (!element) return;
+
+            const target = element.getBoundingClientRect().top + window.scrollY - NAV_OFFSET;
+
+            // Reduced motion: jump, never animate.
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                window.scrollTo({ top: target, behavior: "auto" });
+                return;
+            }
+
+            if (lenis) {
+                lenis.scrollTo(element, { offset: -NAV_OFFSET, duration: 1.5 });
+                return;
+            }
+
+            const globalLenis = (window as unknown as { lenis?: LenisLike }).lenis;
+            if (globalLenis) {
+                globalLenis.scrollTo(element, { offset: -NAV_OFFSET, duration: 1.5 });
+                return;
+            }
+
+            window.scrollTo({ top: target, behavior: "smooth" });
+        },
+        [lenis]
+    );
+
+    /* Veil raised 80 → 90 for the indigo ladder. The surface step is not the
+       problem; the hues are. At 80% a fifth of whatever passes under the bar
+       came through the blur, so mint meters, azure CTAs and amber chips smeared
+       colour into a bar that is specified neutral-only. 90% halves that to a
+       tint below the perceptual floor while the blur stays legible, and it also
+       leaves the bar readable where backdrop-filter is unsupported. */
     return (
-        <nav className="bg-white border-b border-gray-200 sticky top-0 z-50">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div className="flex justify-between items-center h-16">
-                    {/* Logo */}
-                    <Link href="/" className="group">
-                        <img 
-                            src="/logo.png" 
-                            alt="JobsGPT" 
-                            className="h-20 w-auto object-contain group-hover:scale-105 transition-transform duration-300"
-                        />
+        <nav
+            aria-label="Main"
+            className={`fixed inset-x-0 top-0 z-50 bg-canvas/90 border-b transition-colors duration-200 ${
+                scrolled ? "border-line" : "border-transparent"
+            }`}
+            style={{
+                backdropFilter: "blur(var(--nav-blur))",
+                WebkitBackdropFilter: "blur(var(--nav-blur))",
+            }}
+        >
+            <div className="container-content">
+                <div className="flex h-[var(--nav-height)] items-center justify-between gap-6">
+                    {/* Typographic wordmark — the PNG is retired from the nav (P1).
+                        No status dot here: the hero already spends the accent budget. */}
+                    <Link
+                        href="/"
+                        aria-label="Lynceus — home"
+                        className={`flex items-center ${FOCUS_RING}`}
+                    >
+                        <Wordmark className="text-[22px] text-ink" />
                     </Link>
 
-                    {/* Desktop Navigation - Center */}
-                    <div className="hidden lg:flex items-center space-x-8">
-                        <a
-                            href="#home"
-                            onClick={(e) => handleSmoothScroll(e, "#home")}
-                            className="relative text-sm font-medium text-[#4a4e69] hover:text-[#22223b] transition-colors"
-                        >
-                            Home
-                            {activeSection === 'home' && (
-                                <span className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-[#5b6fa3] rounded-full"></span>
-                            )}
-                        </a>
-                        <a
-                            href="#features"
-                            onClick={(e) => handleSmoothScroll(e, "#features")}
-                            className="relative text-sm font-medium text-[#4a4e69] hover:text-[#22223b] transition-colors"
-                        >
-                            Features
-                            {activeSection === 'features' && (
-                                <span className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-[#5b6fa3] rounded-full"></span>
-                            )}
-                        </a>
-                        <a
-                            href="#how-it-works"
-                            onClick={(e) => handleSmoothScroll(e, "#how-it-works")}
-                            className="relative text-sm font-medium text-[#4a4e69] hover:text-[#22223b] transition-colors"
-                        >
-                            Getting Started
-                            {activeSection === 'how-it-works' && (
-                                <span className="absolute -top-2 left-1/2 transform -translate-x-1/2 w-1.5 h-1.5 bg-[#5b6fa3] rounded-full"></span>
-                            )}
-                        </a>
-                        {isAuthenticated && (
-                            <Link
-                                href="/dashboard"
-                                className="text-sm font-medium text-[#4a4e69] hover:text-[#22223b] transition-colors"
-                            >
-                                Dashboard
-                            </Link>
-                        )}
+                    {/* Desktop anchors — mono uppercase, ink underline marks the active section */}
+                    <div className="hidden items-center gap-10 lg:flex">
+                        {NAV_LINKS.map(({ id, label }) => {
+                            const isActive = activeSection === id;
+                            return (
+                                <a
+                                    key={id}
+                                    href={`#${id}`}
+                                    onClick={(e) => handleSmoothScroll(e, `#${id}`)}
+                                    aria-current={isActive ? "true" : undefined}
+                                    className={`group relative block py-2 font-mono text-eyebrow uppercase tracking-[0.08em] transition-colors duration-200 ${FOCUS_RING} [@media(hover:hover)_and_(pointer:fine)]:hover:text-ink ${
+                                        isActive ? "text-ink" : "text-muted"
+                                    }`}
+                                >
+                                    {label}
+                                    <span
+                                        aria-hidden="true"
+                                        className={`absolute inset-x-0 bottom-0 h-px origin-left bg-ink transition-transform duration-200 ${
+                                            isActive
+                                                ? "scale-x-100"
+                                                : "scale-x-0 [@media(hover:hover)_and_(pointer:fine)]:group-hover:scale-x-100"
+                                        }`}
+                                    />
+                                </a>
+                            );
+                        })}
                     </div>
 
-                    {/* Desktop Right Side - Language & CTA */}
-                    <div className="hidden lg:flex items-center space-x-6">
-                        <div className="flex items-center space-x-2 text-sm text-[#4a4e69]">
-                            <Globe className="h-4 w-4" />
-                            <span>English</span>
-                        </div>
+                    {/* Desktop actions — anchors only, never <button> (P10) */}
+                    <div className="hidden items-center gap-6 lg:flex">
+                        {/* Secondary, not primary: the hero CTA already spends the
+                            accent, and P6 caps it at 3 elements per viewport. */}
                         {isAuthenticated ? (
-                            <Link
-                                href="/dashboard"
-                                className="px-5 py-2.5 text-sm font-semibold text-white bg-[#22223b] rounded-lg hover:bg-[#2d3047] transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-2"
-                            >
-                                <span>Dashboard</span>
-                                <ArrowRight className="h-4 w-4" />
-                            </Link>
-                        ) : (
-                            <Link
-                                href="/auth/register"
-                                className="px-5 py-2.5 text-sm font-semibold text-white bg-[#22223b] rounded-lg hover:bg-[#2d3047] transition-all duration-200 shadow-md hover:shadow-lg flex items-center space-x-2"
-                            >
-                                <span>Get Started</span>
-                                <ArrowRight className="h-4 w-4" />
-                            </Link>
-                        )}
-                    </div>
-
-                    {/* Mobile menu button */}
-                    <div className="lg:hidden">
-                        <button
-                            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                            className="inline-flex items-center justify-center p-2 rounded-lg text-[#4a4e69] hover:bg-gray-100 focus:outline-none transition-all"
-                            aria-label="Toggle menu"
-                        >
-                            {mobileMenuOpen ? (
-                                <X className="h-6 w-6" />
-                            ) : (
-                                <Menu className="h-6 w-6" />
-                            )}
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Mobile menu */}
-            {mobileMenuOpen && (
-                <div className="lg:hidden border-t border-gray-200 bg-white">
-                    <div className="px-4 pt-2 pb-4 space-y-1">
-                        <a
-                            href="#home"
-                            onClick={(e) => handleSmoothScroll(e, "#home")}
-                            className="block px-4 py-3 text-base font-medium text-[#4a4e69] hover:bg-gray-50 rounded-lg transition-colors"
-                        >
-                            Home
-                        </a>
-                        <a
-                            href="#features"
-                            onClick={(e) => handleSmoothScroll(e, "#features")}
-                            className="block px-4 py-3 text-base font-medium text-[#4a4e69] hover:bg-gray-50 rounded-lg transition-colors"
-                        >
-                            Features
-                        </a>
-                        <a
-                            href="#how-it-works"
-                            onClick={(e) => handleSmoothScroll(e, "#how-it-works")}
-                            className="block px-4 py-3 text-base font-medium text-[#4a4e69] hover:bg-gray-50 rounded-lg transition-colors"
-                        >
-                            Getting Started
-                        </a>
-                        {isAuthenticated ? (
-                            <Link
-                                href="/dashboard"
-                                onClick={() => setMobileMenuOpen(false)}
-                                className="block px-4 py-3 text-base font-medium text-[#4a4e69] hover:bg-gray-50 rounded-lg transition-colors"
-                            >
+                            <Link href="/dashboard" className="cta cta--secondary">
                                 Dashboard
                             </Link>
                         ) : (
                             <>
-                                <Link
-                                    href="/auth/login"
-                                    onClick={() => setMobileMenuOpen(false)}
-                                    className="block px-4 py-3 text-base font-medium text-[#4a4e69] hover:bg-gray-50 rounded-lg transition-colors"
-                                >
-                                    Sign In
+                                <Link href="/auth/login" className="cta cta--ghost">
+                                    Sign in
                                 </Link>
-                                <Link
-                                    href="/auth/register"
-                                    onClick={() => setMobileMenuOpen(false)}
-                                    className="block px-4 py-3 text-base font-semibold text-white bg-[#22223b] rounded-lg hover:bg-[#2d3047] transition-all text-center"
-                                >
-                                    Get Started
+                                <Link href="/auth/register" className="cta cta--secondary">
+                                    Start free
                                 </Link>
                             </>
                         )}
+                    </div>
+
+                    {/* Genuine UI toggle — the one allowed <button> */}
+                    <button
+                        type="button"
+                        onClick={() => setMobileMenuOpen((open) => !open)}
+                        aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                        aria-expanded={mobileMenuOpen}
+                        aria-controls="home-nav-mobile"
+                        className={`inline-flex items-center justify-center p-2 text-muted transition-colors duration-200 lg:hidden ${FOCUS_RING} [@media(hover:hover)_and_(pointer:fine)]:hover:bg-panel-2 [@media(hover:hover)_and_(pointer:fine)]:hover:text-ink`}
+                    >
+                        {mobileMenuOpen ? (
+                            <X className="h-4 w-4" strokeWidth={1.5} />
+                        ) : (
+                            <Menu className="h-4 w-4" strokeWidth={1.5} />
+                        )}
+                    </button>
+                </div>
+            </div>
+
+            {/* Mobile panel — full-width canvas, 1px line dividers, mono anchors.
+                border-y, not border-t: the sheet is canvas-on-canvas now, so
+                without a closing rule its bottom edge simply dissolves. */}
+            {mobileMenuOpen && (
+                <div
+                    id="home-nav-mobile"
+                    className="border-y border-line bg-canvas lg:hidden"
+                >
+                    <div className="container-content">
+                        {NAV_LINKS.map(({ id, label }) => (
+                            <a
+                                key={id}
+                                href={`#${id}`}
+                                onClick={(e) => handleSmoothScroll(e, `#${id}`)}
+                                aria-current={activeSection === id ? "true" : undefined}
+                                className={`block border-b border-line py-4 font-mono text-eyebrow uppercase tracking-[0.08em] ${FOCUS_RING} ${
+                                    activeSection === id ? "text-ink" : "text-muted"
+                                }`}
+                            >
+                                {label}
+                            </a>
+                        ))}
+
+                        <div className="flex flex-col gap-4 py-6">
+                            {isAuthenticated ? (
+                                <Link
+                                    href="/dashboard"
+                                    onClick={closeMenu}
+                                    className="cta cta--secondary w-full justify-center"
+                                >
+                                    Dashboard
+                                </Link>
+                            ) : (
+                                <>
+                                    <Link
+                                        href="/auth/login"
+                                        onClick={closeMenu}
+                                        className="cta cta--ghost"
+                                    >
+                                        Sign in
+                                    </Link>
+                                    <Link
+                                        href="/auth/register"
+                                        onClick={closeMenu}
+                                        className="cta cta--secondary w-full justify-center"
+                                    >
+                                        Start free
+                                    </Link>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}

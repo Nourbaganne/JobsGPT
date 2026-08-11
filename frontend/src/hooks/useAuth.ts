@@ -1,7 +1,7 @@
 'use client';
 
 import { create } from 'zustand';
-import { api, setAccessToken, getAccessToken } from '@/lib/api';
+import { api } from '@/lib/api';
 import type { User } from '@/types';
 
 interface AuthState {
@@ -18,7 +18,7 @@ interface AuthState {
   clearError: () => void;
 }
 
-export const useAuth = create<AuthState>((set, get) => ({
+export const useAuth = create<AuthState>((set) => ({
   user: null,
   isAuthenticated: false,
   isLoading: true,

@@ -1,910 +1,626 @@
 import Link from "next/link";
-import { ArrowRight, CheckCircle, Clock, Search, Zap, Sparkles as SparklesIcon, Briefcase, TrendingUp, Users, Target, MapPin, Star, Building2, Headphones, Award, Mail, X, Check, Coins, ChevronDown, HelpCircle } from "lucide-react";
 import HomeNavbar from "@/components/HomeNavbar";
 import HomeFooter from "@/components/HomeFooter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import HorizontalScrollCarousel from "@/components/HorizontalScrollCarousel";
+import StackingCards from "@/components/StackingCards";
 import AnimatedCounter from "@/components/AnimatedCounter";
 import { Marquee } from "@/components/ui/marquee";
-import { cn } from "@/lib/utils";
-import StackingCards from "@/components/StackingCards";
-import { Sparkles } from "@/components/Sparkles";
+
+/* ---------------------------------------------------------------------------
+   Static content — kept out of the JSX so the markup stays readable.
+   -------------------------------------------------------------------------- */
+
+const QUEUE_ROWS = [
+  { role: "Senior Backend Engineer", company: "Northwind", match: "94" },
+  { role: "Platform Engineer", company: "Cadence Labs", match: "88" },
+  { role: "Infrastructure Engineer", company: "Halcyon", match: "81" },
+  { role: "Backend Engineer", company: "Meridian", match: "76" },
+];
+
+const BOARDS = [
+  "LINKEDIN",
+  "INDEED",
+  "GREENHOUSE",
+  "LEVER",
+  "WORKDAY",
+  "ASHBY",
+  "WELLFOUND",
+  "SMARTRECRUITERS",
+  "BAMBOOHR",
+  "RECRUITEE",
+];
+
+const COMPARISON_ROWS = [
+  { label: "Time spent searching", manual: "Hours a day", lynceus: "Minutes a day" },
+  { label: "Recruiter contacts", manual: "Manual research", lynceus: "In the record" },
+  { label: "Outreach", manual: "Generic template", lynceus: "Drafted per role" },
+  { label: "Company context", manual: "Whatever is public", lynceus: "Leadership, named" },
+  { label: "Tracking", manual: "A spreadsheet", lynceus: "Built in" },
+  { label: "Ranking", manual: "Post date", lynceus: "Resume-scored" },
+];
+
+/* Numbers band — all four bars share one viewport, so the band gets two hues,
+   not three: mint for what was matched, amber for the scan that never stops.
+   Companies covered is a plain count, not a state, so it reads in neutral.
+   Proportions are presentational: they encode the figure's relative reading. */
+const STAT_METERS = [
+  { fill: "", width: "92%" },                        /* jobs matched   → mint    */
+  { fill: "bg-line-strong", width: "78%" },          /* companies      → neutral */
+  { fill: "", width: "95%" },                        /* satisfaction   → mint    */
+  { fill: "meter__fill--amber", width: "100%" },     /* always scanning→ amber   */
+];
+
+const PLANS = [
+  {
+    name: "Starter",
+    note: "To try it.",
+    price: "$9",
+    credits: "50 CREDITS",
+    marked: false,
+    features: [
+      "50 searches",
+      "25 drafted emails",
+      "16 company reports",
+    ],
+  },
+  {
+    name: "Pro",
+    note: "For a live search.",
+    price: "$29",
+    credits: "240 CREDITS · 40 FREE",
+    marked: true,
+    features: [
+      "240 searches",
+      "120 drafted emails",
+      "80 company reports",
+    ],
+  },
+  {
+    name: "Enterprise",
+    note: "For teams. API access.",
+    price: "$79",
+    credits: "780 CREDITS · 180 FREE",
+    marked: false,
+    features: [
+      "780 searches",
+      "390 drafted emails",
+      "260 company reports",
+    ],
+  },
+];
+
+const LEDGER = ["JOB SEARCH · 1 CREDIT", "AI EMAIL · 2 CREDITS", "COMPANY INTEL · 3 CREDITS"];
+
+/* A price label is not an action — there is nothing here to click — so the two
+   ordinary rows read in neutral. Violet marks the one line that is AI work, and
+   because it is the only hue in the set it is the only thing the colour says. */
+const LEDGER_HUE = ["text-dim", "text-violet", "text-dim"];
+
+const QUOTES = [
+  {
+    quote:
+      "Three interviews in two weeks. I never opened a job board.",
+    attribution: "SARAH M. · HIRED IN 6 WEEKS",
+  },
+  {
+    quote:
+      "I read the queue over coffee and send two or three emails.",
+    attribution: "JAMES C. · HIRED IN 9 WEEKS",
+  },
+  {
+    quote:
+      "It read the transferable half of my resume better than I could.",
+    attribution: "EMILY P. · HIRED IN 11 WEEKS",
+  },
+];
+
+const FAQS = [
+  {
+    question: "How do credits work?",
+    answer:
+      "One credit a search, two a drafted email, three a company report. They don't expire.",
+  },
+  {
+    question: "How good is the matching?",
+    answer:
+      "Every opening is scored against your resume and the bar you set. You see that score before you spend a credit.",
+  },
+  {
+    question: "Can I get a refund on unused credits?",
+    answer:
+      "Yes, within 14 days, on anything you have not spent.",
+  },
+  {
+    question: "Where do the contact details come from?",
+    answer:
+      "Public sources and our own database, re-verified on a schedule.",
+  },
+  {
+    question: "Is my data secure?",
+    answer:
+      "Encrypted in transit and at rest. Never sold, never shared without you.",
+  },
+];
+
+/* Shared column template for the match-queue panel — role · company · match.
+   Fixed tracks so every row aligns with the header labels above it. */
+const QUEUE_GRID = "grid grid-cols-[minmax(0,1fr)_96px_80px] items-center gap-4";
+
+/* Numbers-band figures. `.tabular` is declared after `.display` in globals.css
+   at equal specificity, so on an element carrying both, tabular's mono face wins
+   the font-family cascade — these figures have always rendered in mono, which is
+   right for a control surface. Say so outright instead of inheriting it from a
+   class whose face is being silently overridden, and take the h2 tracking:
+   --track-h1 was cut for a 62px sans, not for mono at 38px. */
+const FIGURE =
+  "tabular text-h2 font-semibold leading-[1.04] tracking-[var(--track-h2)] text-ink";
+
+/* ---------------------------------------------------------------------------
+   Page
+   -------------------------------------------------------------------------- */
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex min-h-screen flex-col bg-canvas">
       <HomeNavbar />
-      {/* Hero Section */}
-      <header id="home" className="relative overflow-hidden bg-[#22223b] min-h-screen flex items-center pt-20">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#22223b] via-[#4a4e69]/50 to-[#22223b] z-0" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(154,140,152,0.1),transparent_50%)] z-0" />
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 left-10 w-72 h-72 bg-[#5b6fa3]/10 rounded-full blur-3xl" data-parallax="0.3"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#4a4e69]/10 rounded-full blur-3xl" data-parallax="0.2"></div>
-        </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left Side - Text Content */}
-            <div className="text-left">
-              <div className="scroll-animate scroll-rotate scroll-stagger-1 inline-flex items-center gap-2 px-4 py-2 mb-6 bg-[#4a4e69]/80 backdrop-blur-sm rounded-full text-sm font-medium text-white border border-[#5b6fa3]/50">
-                <SparklesIcon className="h-4 w-4" />
-                <span>Available Now</span>
-              </div>
-              <h1 className="scroll-animate scroll-blur scroll-stagger-1 text-4xl tracking-tight font-extrabold text-white sm:text-5xl md:text-6xl lg:text-7xl">
-                <span className="block text-reveal">Transform Your</span>
-                <span className="block bg-gradient-to-r from-[#b8c5d6] via-white to-[#b8c5d6] bg-clip-text text-transparent bg-[length:200%_auto] animate-[gradient_3s_ease_infinite] text-reveal scroll-glow">
-                  Job Search Today
-                </span>
-              </h1>
-              <p className="scroll-animate scroll-slide-up scroll-stagger-2 mt-6 max-w-xl text-lg text-gray-300 sm:text-xl md:mt-8 md:text-2xl leading-relaxed">
-                Start building your job search in minutes with our powerful platform. No technical skills required.
+
+      {/* 01 — HERO -------------------------------------------------------- */}
+      {/* Hues: mint (queue state) + azure (action). Nothing else. */}
+      <header
+        id="home"
+        className="section section--tight relative overflow-hidden bg-canvas pt-[var(--hero-pad-top)]"
+      >
+        <div aria-hidden="true" className="grid-bg pointer-events-none absolute inset-0" />
+
+        <div className="container-content relative">
+          <div className="grid items-center gap-10 lg:grid-cols-2 lg:gap-30">
+            {/* Left — copy */}
+            <div className="scroll-animate">
+              <p className="status">
+                <span className="status__dot queue-pulse" aria-hidden="true" />
+                AUTOMATED JOB SEARCH
               </p>
-              <div className="scroll-animate scroll-scale scroll-stagger-3 mt-10 flex flex-col sm:flex-row gap-4 md:mt-12">
-                <Link
-                  href="/auth/register"
-                  className="magnetic group inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-semibold rounded-xl text-[#22223b] bg-gradient-to-r from-[#b8c5d6] to-white hover:from-white hover:to-[#b8c5d6] shadow-xl hover:shadow-2xl hover:scale-105 transition-all duration-300"
-                >
-                  <Users className="mr-2 h-5 w-5" />
-                  Get Started Now
+
+              <h1 className="display text-h1 mt-6 text-ink">
+                We run the search.
+                <br />
+                You take the <span className="mark">interview</span>.
+              </h1>
+
+              <p className="text-lead mt-6 max-w-[52ch] text-muted">
+                We watch every board, rank every opening against your resume, and draft the email.
+              </p>
+
+              <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+                <Link href="/auth/register" className="cta cta--primary">
+                  Start free
+                  <span className="font-mono" aria-hidden="true">
+                    →
+                  </span>
                 </Link>
-                <Link
-                  href="/dashboard"
-                  className="magnetic inline-flex items-center justify-center px-8 py-4 border-2 border-white/30 text-base font-semibold rounded-xl text-white bg-white/10 backdrop-blur-sm hover:bg-white/20 hover:border-white/50 shadow-lg hover:shadow-xl transition-all duration-300"
-                >
-                  <Search className="mr-2 h-5 w-5" />
-                  View Demo
-                </Link>
+                <a href="#how-it-works" className="cta cta--secondary">
+                  See how it runs
+                </a>
               </div>
-              <div className="scroll-animate scroll-fade-up scroll-stagger-4 mt-8 flex items-center gap-6 text-sm text-gray-400">
-                <div className="flex items-center gap-2">
-                  <Users className="h-5 w-5 text-[#b8c5d6]" />
-                  <span>5,000+ Active Users</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="h-5 w-5 text-[#b8c5d6]" />
-                  <span>5-min Setup</span>
-                </div>
-              </div>
+
+              <p className="postscript mt-6">
+                NO SUBSCRIPTION · CREDITS DON&apos;T EXPIRE · NO DEMO TO BOOK
+              </p>
             </div>
 
-            {/* Right Side - Laptop Mockup */}
-            <div className="scroll-animate scroll-fade-right scroll-scale scroll-stagger-2 relative">
-              {/* Sparkles Effect */}
-              <div className="absolute -bottom-20 left-1/2 -translate-x-1/2 w-[120%] h-48 z-0">
-                <Sparkles
-                  className="w-full h-full"
-                  size={2}
-                  density={100}
-                  speed={0.8}
-                  color="#b8c5d6"
-                  opacity={0.8}
-                  direction="top"
-                />
-              </div>
-              <div className="relative mx-auto z-10" style={{ maxWidth: '800px' }}>
-                {/* Laptop Frame */}
-                <div className="relative bg-gray-800 rounded-t-2xl p-2 shadow-2xl">
-                  {/* Screen Bezel */}
-                  <div className="bg-black rounded-lg overflow-hidden">
-                    {/* Browser Bar */}
-                    <div className="bg-[#4a4e69] px-4 py-2 flex items-center gap-2">
-                      <div className="flex gap-1.5">
-                        <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                        <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                        <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                      </div>
-                      <div className="flex-1 bg-[#22223b] rounded px-3 py-1 text-xs text-gray-400 text-center">
-                        jobsgpt.com/dashboard
-                      </div>
-                    </div>
-                    {/* Dashboard Content */}
-                    <div className="bg-[#e8eef5] p-6 min-h-[500px]">
-                      {/* Dashboard Header */}
-                      <div className="mb-6">
-                        <h2 className="text-2xl font-bold text-[#22223b] mb-2">Dashboard</h2>
-                        <p className="text-sm text-[#4a4e69]">Welcome back! Here&apos;s an overview of your job search progress.</p>
-                      </div>
-                      
-                      {/* Stats Cards */}
-                      <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div className="bg-white rounded-xl p-4 shadow-md border border-[#b8c5d6]/30">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-[#4a4e69]">Total Jobs</span>
-                            <Briefcase className="h-4 w-4 text-[#5b6fa3]" />
-                          </div>
-                          <div className="text-2xl font-bold text-[#22223b]">156</div>
-                          <p className="text-xs text-green-600 mt-1">+12% from last month</p>
-                        </div>
-                        <div className="bg-white rounded-xl p-4 shadow-md border border-[#b8c5d6]/30">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-[#4a4e69]">Matches</span>
-                            <Target className="h-4 w-4 text-[#5b6fa3]" />
-                          </div>
-                          <div className="text-2xl font-bold text-[#22223b]">24</div>
-                          <p className="text-xs text-green-600 mt-1">+2 this week</p>
-                        </div>
-                      </div>
-
-                      {/* Recent Jobs Table */}
-                      <div className="bg-white rounded-xl shadow-md border border-[#b8c5d6]/30 overflow-hidden">
-                        <div className="px-4 py-3 bg-[#e8eef5] border-b border-[#b8c5d6]/30">
-                          <h3 className="text-sm font-semibold text-[#22223b]">Recent Job Matches</h3>
-                        </div>
-                        <div className="p-4">
-                          <div className="space-y-3">
-                            {[1, 2, 3].map((i) => (
-                              <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-[#e8eef5] hover:bg-[#b8c5d6]/20 transition-colors">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
-                                    <span className="text-sm font-medium text-[#22223b]">Senior Developer</span>
-                                  </div>
-                                  <span className="text-xs text-[#4a4e69]">Tech Corp • Remote</span>
-                                </div>
-                                <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded">95% match</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+            {/* Right — match queue panel (data surface, layered not shadowed) */}
+            <div className="scroll-animate scroll-stagger-2">
+              <div className="panel overflow-hidden">
+                <div className="panel__header">
+                  <span>MATCH QUEUE</span>
+                  <span className="chip chip--live">LIVE</span>
                 </div>
-                {/* Laptop Base */}
-                <div className="h-2 bg-gray-700 rounded-b-lg"></div>
-                <div className="h-1 bg-gray-900 rounded-b-lg mx-auto" style={{ width: '60%' }}></div>
+
+                <div className="relative overflow-hidden">
+                  <div
+                    aria-hidden="true"
+                    className="scan-sweep pointer-events-none absolute inset-x-0 top-0 z-10 h-[8%] border-t border-line-strong"
+                  />
+
+                  <div
+                    className={`eyebrow ${QUEUE_GRID} border-b border-line bg-panel-2 px-4 py-2 text-dim`}
+                  >
+                    <span>ROLE</span>
+                    <span>COMPANY</span>
+                    <span className="text-right">MATCH</span>
+                  </div>
+
+                  {QUEUE_ROWS.map((row, i) => (
+                    <div key={row.role} className={`panel__row panel__row--hover ${QUEUE_GRID}`}>
+                      <span className="text-body-sm min-w-0 truncate text-ink">{row.role}</span>
+                      <span className="text-body-sm min-w-0 truncate text-muted">
+                        {row.company}
+                      </span>
+                      <span className="flex flex-col items-end gap-2">
+                        <span
+                          className={`tabular text-body-sm ${i === 0 ? "text-mint" : "text-muted"}`}
+                        >
+                          {row.match}
+                        </span>
+                        {/* Mint is the matched state, so only the top match spends
+                            it — figure and bar are one datum. The rest of the queue
+                            reads in neutral so the leader stays legible. */}
+                        <span className="meter block w-full">
+                          <span
+                            aria-hidden="true"
+                            className={`meter__fill meter-fill block ${
+                              i === 0 ? "" : "bg-line-strong"
+                            }`}
+                            style={{ width: `${row.match}%` }}
+                          />
+                        </span>
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                <p className="eyebrow border-t border-line px-4 py-4 text-dim">
+                  RESCANNED CONTINUOUSLY · YOU REVIEW BEFORE ANYTHING SENDS
+                </p>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-[#22223b] relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_50%,rgba(154,140,152,0.15),transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_50%,rgba(201,173,167,0.1),transparent_50%)]" />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-12">
-            {/* Jobs Matched */}
-            <div className="text-center group">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-4 group-hover:scale-110 group-hover:bg-white/20 transition-all duration-300">
-                <Briefcase className="h-8 w-8 text-[#b8c5d6]" />
-              </div>
-              <div className="text-4xl md:text-5xl font-extrabold text-white mb-2">
-                <AnimatedCounter end={10000} suffix="+" />
-              </div>
-              <p className="text-sm md:text-base text-[#b8c5d6] font-medium">Jobs Matched</p>
-            </div>
-
-            {/* Partner Companies */}
-            <div className="text-center group">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-4 group-hover:scale-110 group-hover:bg-white/20 transition-all duration-300">
-                <Building2 className="h-8 w-8 text-[#b8c5d6]" />
-              </div>
-              <div className="text-4xl md:text-5xl font-extrabold text-white mb-2">
-                <AnimatedCounter end={500} suffix="+" />
-              </div>
-              <p className="text-sm md:text-base text-[#b8c5d6] font-medium">Partner Companies</p>
-            </div>
-
-            {/* User Satisfaction */}
-            <div className="text-center group">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-4 group-hover:scale-110 group-hover:bg-white/20 transition-all duration-300">
-                <Award className="h-8 w-8 text-[#b8c5d6]" />
-              </div>
-              <div className="text-4xl md:text-5xl font-extrabold text-white mb-2">
-                <AnimatedCounter end={95} suffix="%" />
-              </div>
-              <p className="text-sm md:text-base text-[#b8c5d6] font-medium">User Satisfaction</p>
-            </div>
-
-            {/* Support */}
-            <div className="text-center group">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm mb-4 group-hover:scale-110 group-hover:bg-white/20 transition-all duration-300">
-                <Headphones className="h-8 w-8 text-[#b8c5d6]" />
-              </div>
-              <div className="text-4xl md:text-5xl font-extrabold text-white mb-2">
-                24/7
-              </div>
-              <p className="text-sm md:text-base text-[#b8c5d6] font-medium">Support Available</p>
-            </div>
-          </div>
+      {/* 02 — BOARD STRIP ------------------------------------------------- */}
+      {/* Hue: amber only — the strip is a scan in progress. The closing rule is
+          supplied by the manifesto's .band below, so this section carries a top
+          rule alone — two stacked 1px borders would read as a 2px seam. */}
+      <section className="border-t border-line bg-canvas py-8">
+        <div className="container-content">
+          <p className="chip chip--scan">CONTINUOUSLY SCANNING</p>
+        </div>
+        <div className="mt-6 [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent)]">
+          <Marquee className="[--duration:40s] [--gap:40px]">
+            {BOARDS.map((board) => (
+              <span key={board} className="eyebrow text-body-sm shrink-0 text-dim">
+                {board}
+              </span>
+            ))}
+          </Marquee>
         </div>
       </section>
 
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-[#e8eef5] overflow-hidden lg:py-28 relative">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#e8eef5] via-[#b8c5d6]/20 to-[#5b6fa3]/10 z-0" />
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-20 right-10 w-96 h-96 bg-[#5b6fa3]/10 rounded-full blur-3xl" data-parallax="0.3"></div>
-          <div className="absolute bottom-20 left-10 w-72 h-72 bg-[#b8c5d6]/10 rounded-full blur-3xl" data-parallax="0.2"></div>
-        </div>
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Left Side - Visual Mockup */}
-            <div className="scroll-animate scroll-fade-left scroll-scale order-2 lg:order-1">
-              <div className="relative mx-auto" style={{ maxWidth: '700px' }}>
-                {/* Phone/Tablet Mockup */}
-                <div className="relative bg-gray-800 rounded-3xl p-3 shadow-2xl">
-                  <div className="bg-black rounded-2xl overflow-hidden">
-                    {/* Status Bar */}
-                    <div className="bg-[#4a4e69] px-4 py-2 flex items-center justify-between text-white text-xs">
-                      <div className="flex items-center gap-1">
-                        <div className="w-1 h-1 rounded-full bg-white"></div>
-                        <div className="w-1 h-1 rounded-full bg-white"></div>
-                        <div className="w-1 h-1 rounded-full bg-white"></div>
-                      </div>
-                      <span>9:41</span>
-                      <div className="flex items-center gap-1">
-                        <div className="w-6 h-3 border border-white rounded-sm"></div>
-                        <div className="w-1 h-1 rounded-full bg-white"></div>
-                      </div>
-                    </div>
-                    {/* App Content */}
-                    <div className="bg-[#e8eef5] p-4 min-h-[500px]">
-                      {/* Job Cards Preview */}
-                      <div className="space-y-3">
-                        {[1, 2, 3].map((i) => (
-                          <div key={i} className="bg-white rounded-xl p-4 shadow-md border border-[#b8c5d6]/30">
-                            <div className="flex items-start justify-between mb-2">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <div className="w-8 h-8 rounded-lg bg-[#5b6fa3] flex items-center justify-center">
-                                    <Briefcase className="h-4 w-4 text-white" />
-                                  </div>
-                                  <div>
-                                    <h4 className="text-sm font-semibold text-[#22223b]">Senior Developer</h4>
-                                    <p className="text-xs text-[#4a4e69]">Tech Corp</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-3 text-xs text-[#4a4e69] mt-2">
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="h-3 w-3" />
-                                    <span>Remote</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Clock className="h-3 w-3" />
-                                    <span>2h ago</span>
-                                  </div>
-                                </div>
-                              </div>
-                              <span className="text-xs font-bold text-green-600 bg-green-100 px-2 py-1 rounded">95%</span>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      {/* Notification Badge */}
-                      <div className="mt-4 bg-[#22223b] rounded-xl p-4 text-white">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Zap className="h-4 w-4" />
-                          <span className="text-sm font-semibold">New Match Found!</span>
-                        </div>
-                        <p className="text-xs opacity-90">3 new jobs match your profile</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                {/* Decorative Elements */}
-                <div className="absolute -top-4 -right-4 w-24 h-24 bg-gradient-to-br from-[#5b6fa3] to-[#b8c5d6] rounded-full blur-2xl opacity-50" data-parallax="0.4"></div>
-                <div className="absolute -bottom-4 -left-4 w-32 h-32 bg-gradient-to-br from-[#b8c5d6] to-[#5b6fa3] rounded-full blur-2xl opacity-50" data-parallax="0.3"></div>
-              </div>
-            </div>
-
-            {/* Right Side - Text Content */}
-            <div className="scroll-animate scroll-fade-right scroll-stagger-1 order-1 lg:order-2">
-              <div className="text-left lg:text-left">
-                <h2 className="scroll-animate scroll-blur text-3xl leading-8 font-extrabold tracking-tight text-[#22223b] sm:text-4xl lg:text-5xl">
-                  Work Smarter, Not Harder
-                </h2>
-                <p className="scroll-animate scroll-slide-up scroll-stagger-2 mt-4 text-lg text-[#4a4e69] sm:text-xl leading-relaxed">
-                  Our platform handles the tedious parts of job hunting so you can focus on preparing for interviews.
-                </p>
-
-                {/* Feature List */}
-                <div className="scroll-animate scroll-fade-up scroll-stagger-3 mt-8 space-y-6">
-                  <div className="flex items-start gap-4 group">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#5b6fa3] flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                      <Search className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-[#22223b] mb-1">Smart Matching</h3>
-                      <p className="text-[#4a4e69]">
-                        Our advanced algorithms analyze your resume and preferences to find jobs that are a perfect fit for your skills and career goals.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4 group">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#5b6fa3] flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                      <Zap className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-[#22223b] mb-1">Automated Discovery</h3>
-                      <p className="text-[#4a4e69]">
-                        We scour multiple job boards 24/7. New opportunities are discovered and added to your dashboard instantly.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-4 group">
-                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-[#5b6fa3] flex items-center justify-center shadow-lg group-hover:scale-110 group-hover:rotate-6 transition-all duration-300">
-                      <Clock className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-bold text-[#22223b] mb-1">Real-time Alerts</h3>
-                      <p className="text-[#4a4e69]">
-                        Be the first to apply. Get notified immediately when high-priority matches are found, giving you a competitive edge.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="scroll-animate scroll-scale scroll-stagger-4 mt-10">
-                  <Link
-                    href="/auth/register"
-                    className="magnetic inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-semibold rounded-xl text-white bg-[#22223b] hover:hover:bg-[#2d3047] shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-300"
-                  >
-                    Get Started
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Stacking Cards Features Section */}
-      <StackingCards />
-
-      {/* Comparison Table */}
-      <section className="py-20 bg-[#e8eef5] lg:py-28 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#e8eef5] via-white/30 to-[#e8eef5] z-0" />
-        <div className="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className="scroll-animate scroll-fade-up text-3xl font-extrabold text-[#22223b] sm:text-4xl lg:text-5xl">
-              JobsGPT vs Traditional Job Search
-            </h2>
-            <p className="scroll-animate scroll-fade-up scroll-stagger-1 mt-4 text-lg text-[#4a4e69] sm:text-xl max-w-2xl mx-auto">
-              See how our platform transforms the way you find your next opportunity.
+      {/* 03 — MANIFESTO INTERRUPT ----------------------------------------- */}
+      {/* No hue. Rules above and below turn the band into a deliberate cut. */}
+      <section className="section section--tight band bg-surface">
+        <div className="container-content">
+          <div className="scroll-animate max-w-[72ch]">
+            <hr className="rule" />
+            <p className="postscript text-h3 py-6 text-muted">
+              THE AVERAGE SEARCH TAKES FIVE MONTHS. MOST OF THAT IS TABS.
             </p>
-          </div>
-
-          <div className="scroll-animate scroll-fade-up scroll-stagger-2">
-            <div className="bg-white rounded-2xl shadow-2xl overflow-hidden border border-[#b8c5d6]/20">
-              {/* Table Header */}
-              <div className="grid grid-cols-3 bg-gradient-to-r from-[#22223b] to-[#4a4e69] text-white">
-                <div className="p-6 font-semibold text-lg">Feature</div>
-                <div className="p-6 font-semibold text-lg text-center border-l border-white/20">Traditional</div>
-                <div className="p-6 font-semibold text-lg text-center border-l border-white/20 bg-gradient-to-r from-[#5b6fa3] to-[#b8c5d6]">JobsGPT</div>
-              </div>
-
-              {/* Table Rows */}
-              {[
-                { feature: 'Time spent searching', traditional: 'Hours daily', jobmatch: 'Minutes' },
-                { feature: 'Finding recruiter contacts', traditional: 'Manual research', jobmatch: 'Instant access' },
-                { feature: 'Personalized outreach', traditional: 'Generic templates', jobmatch: 'AI-generated emails' },
-                { feature: 'Company insights', traditional: 'Limited info', jobmatch: 'Full intel (CEO, hiring team)' },
-                { feature: 'Application tracking', traditional: 'Spreadsheets', jobmatch: 'Built-in dashboard' },
-                { feature: 'Job matching accuracy', traditional: 'Random results', jobmatch: 'AI-powered 95%+' },
-              ].map((row, index) => (
-                <div key={index} className={`grid grid-cols-3 ${index % 2 === 0 ? 'bg-white' : 'bg-[#e8eef5]/30'}`}>
-                  <div className="p-5 font-medium text-[#22223b] border-t border-[#b8c5d6]/20">
-                    {row.feature}
-                  </div>
-                  <div className="p-5 text-center border-t border-l border-[#b8c5d6]/20 flex items-center justify-center gap-2">
-                    <X className="h-5 w-5 text-red-400" />
-                    <span className="text-[#4a4e69]">{row.traditional}</span>
-                  </div>
-                  <div className="p-5 text-center border-t border-l border-[#b8c5d6]/20 bg-[#b8c5d6]/10 flex items-center justify-center gap-2">
-                    <Check className="h-5 w-5 text-green-500" />
-                    <span className="text-[#22223b] font-medium">{row.jobmatch}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
+            <hr className="rule" />
           </div>
         </div>
       </section>
 
-      {/* Pricing Section - Credits Model */}
-      <section id="pricing" className="py-20 bg-white lg:py-28 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(154,140,152,0.1),transparent_50%)]" />
-        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="scroll-animate scroll-fade-up inline-flex items-center gap-2 px-4 py-2 mb-6 bg-[#b8c5d6]/20 rounded-full text-sm font-medium text-[#4a4e69]">
-              <Coins className="h-4 w-4" />
-              <span>Credit-Based Pricing</span>
-            </div>
-            <h2 className="scroll-animate scroll-fade-up text-3xl font-extrabold text-[#22223b] sm:text-4xl lg:text-5xl">
-              Pay Only for What You Use
-            </h2>
-            <p className="scroll-animate scroll-fade-up scroll-stagger-1 mt-4 text-lg text-[#4a4e69] sm:text-xl max-w-2xl mx-auto">
-              No subscriptions. Buy credits and use them whenever you need. Credits never expire.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
-            {/* Starter Pack */}
-            <div className="scroll-animate scroll-fade-up scroll-stagger-1">
-              <div className="h-full p-8 rounded-2xl bg-white border-2 border-[#b8c5d6]/30 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-bold text-[#22223b] mb-2">Starter Pack</h3>
-                  <p className="text-[#4a4e69] text-sm mb-4">Perfect for trying the platform</p>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-5xl font-extrabold text-[#22223b]">$9</span>
-                  </div>
-                  <p className="text-[#5b6fa3] mt-2 font-medium">50 Credits</p>
-                </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center gap-3 text-[#4a4e69]">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span>50 job searches</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-[#4a4e69]">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span>25 AI-generated emails</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-[#4a4e69]">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span>16 company intel reports</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-[#4a4e69]">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span>Credits never expire</span>
-                  </li>
-                </ul>
-                <Link
-                  href="/auth/register"
-                  className="block w-full text-center px-6 py-3 border-2 border-[#4a4e69] text-[#4a4e69] font-semibold rounded-xl hover:bg-[#4a4e69] hover:text-white transition-all duration-300"
-                >
-                  Get Started
-                </Link>
-              </div>
-            </div>
-
-            {/* Pro Pack - Most Popular */}
-            <div className="scroll-animate scroll-fade-up scroll-stagger-2">
-              <div className="h-full p-8 rounded-2xl bg-[#22223b] border-2 border-[#5b6fa3] shadow-2xl hover:-translate-y-2 transition-all duration-300 relative">
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-[#b8c5d6] to-[#5b6fa3] rounded-full text-white text-sm font-semibold">
-                  Most Popular
-                </div>
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-bold text-white mb-2">Pro Pack</h3>
-                  <p className="text-[#b8c5d6] text-sm mb-4">Best value for active job seekers</p>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-5xl font-extrabold text-white">$29</span>
-                  </div>
-                  <p className="text-[#b8c5d6] mt-2 font-medium">200 Credits + 20% Bonus</p>
-                </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center gap-3 text-white">
-                    <Check className="h-5 w-5 text-[#b8c5d6] flex-shrink-0" />
-                    <span>240 total credits (20% bonus)</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-white">
-                    <Check className="h-5 w-5 text-[#b8c5d6] flex-shrink-0" />
-                    <span>120 AI-generated emails</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-white">
-                    <Check className="h-5 w-5 text-[#b8c5d6] flex-shrink-0" />
-                    <span>80 company intel reports</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-white">
-                    <Check className="h-5 w-5 text-[#b8c5d6] flex-shrink-0" />
-                    <span>Priority support</span>
-                  </li>
-                </ul>
-                <Link
-                  href="/auth/register"
-                  className="block w-full text-center px-6 py-3 bg-gradient-to-r from-[#b8c5d6] to-white text-[#22223b] font-semibold rounded-xl hover:from-white hover:to-[#b8c5d6] transition-all duration-300"
-                >
-                  Get Pro Pack
-                </Link>
-              </div>
-            </div>
-
-            {/* Enterprise Pack */}
-            <div className="scroll-animate scroll-fade-up scroll-stagger-3">
-              <div className="h-full p-8 rounded-2xl bg-white border-2 border-[#b8c5d6]/30 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-bold text-[#22223b] mb-2">Enterprise Pack</h3>
-                  <p className="text-[#4a4e69] text-sm mb-4">For power users & teams</p>
-                  <div className="flex items-baseline justify-center gap-1">
-                    <span className="text-5xl font-extrabold text-[#22223b]">$79</span>
-                  </div>
-                  <p className="text-[#5b6fa3] mt-2 font-medium">600 Credits + 30% Bonus</p>
-                </div>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center gap-3 text-[#4a4e69]">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span>780 total credits (30% bonus)</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-[#4a4e69]">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span>390 AI-generated emails</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-[#4a4e69]">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span>260 company intel reports</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-[#4a4e69]">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span>Dedicated account manager</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-[#4a4e69]">
-                    <Check className="h-5 w-5 text-green-500 flex-shrink-0" />
-                    <span>API access</span>
-                  </li>
-                </ul>
-                <Link
-                  href="/auth/register"
-                  className="block w-full text-center px-6 py-3 border-2 border-[#4a4e69] text-[#4a4e69] font-semibold rounded-xl hover:bg-[#4a4e69] hover:text-white transition-all duration-300"
-                >
-                  Get Enterprise
-                </Link>
-              </div>
-            </div>
-          </div>
-
-          {/* How Credits Work */}
-          <div className="scroll-animate scroll-fade-up scroll-stagger-4">
-            <div className="bg-[#e8eef5] rounded-2xl p-8 md:p-12">
-              <h3 className="text-2xl font-bold text-[#22223b] mb-6 text-center">How Credits Work</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-white shadow-md flex items-center justify-center mx-auto mb-4">
-                    <Search className="h-8 w-8 text-[#4a4e69]" />
-                  </div>
-                  <h4 className="font-semibold text-[#22223b] mb-2">Job Search</h4>
-                  <p className="text-[#4a4e69] text-sm">1 credit per search</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-white shadow-md flex items-center justify-center mx-auto mb-4">
-                    <Mail className="h-8 w-8 text-[#4a4e69]" />
-                  </div>
-                  <h4 className="font-semibold text-[#22223b] mb-2">AI Email</h4>
-                  <p className="text-[#4a4e69] text-sm">2 credits per email</p>
-                </div>
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-white shadow-md flex items-center justify-center mx-auto mb-4">
-                    <Building2 className="h-8 w-8 text-[#4a4e69]" />
-                  </div>
-                  <h4 className="font-semibold text-[#22223b] mb-2">Company Intel</h4>
-                  <p className="text-[#4a4e69] text-sm">3 credits per report</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works Section */}
+      {/* 04 — HOW IT WORKS ------------------------------------------------ */}
       <div id="how-it-works">
-        <HorizontalScrollCarousel
-            items={[
-              { 
-                id: 1,
-                step: 1, 
-                title: "Upload Resume", 
-                description: "Upload your CV so we can understand your experience and skills.",
-                icon: "Briefcase"
-              },
-              { 
-                id: 2,
-                step: 2, 
-                title: "Set Preferences", 
-                description: "Define your desired role, location, and salary expectations.",
-                icon: "Target"
-              },
-              { 
-                id: 3,
-                step: 3, 
-                title: "Get Matched", 
-                description: "Sit back as curated job listings appear in your dashboard.",
-                icon: "Search"
-              },
-              { 
-                id: 4,
-                step: 4, 
-                title: "Review Matches", 
-                description: "Browse through personalized job recommendations tailored to your profile.",
-                icon: "CheckCircle"
-              },
-              { 
-                id: 5,
-                step: 5, 
-                title: "Apply Easily", 
-                description: "One-click application process with pre-filled information.",
-                icon: "Zap"
-              },
-              { 
-                id: 6,
-                step: 6, 
-                title: "Track Progress", 
-                description: "Monitor your applications and interview status in real-time.",
-                icon: "TrendingUp"
-              },
-              { 
-                id: 7,
-                step: 7, 
-                title: "Get Notifications", 
-                description: "Receive instant alerts when new matching jobs are found.",
-                icon: "Clock"
-              },
-              { 
-                id: 8,
-                step: 8, 
-                title: "Land Your Dream Job", 
-                description: "Successfully secure your ideal position with our platform.",
-                icon: "Users"
-              }
-            ]}
-          />
+        <HorizontalScrollCarousel />
       </div>
 
-      {/* Testimonials Section */}
-      <section className="py-20 bg-[#e8eef5] lg:py-28 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#e8eef5] via-white/50 to-[#e8eef5] z-0" />
-        
-        <div className="relative z-10">
-          <div className="text-center mb-12 px-4">
-            <h2 className="scroll-animate scroll-fade-up text-3xl font-extrabold text-[#22223b] sm:text-4xl lg:text-5xl">
-              What Our Users Say
+      {/* 05 — FEATURE STACK ----------------------------------------------- */}
+      <div id="features">
+        <StackingCards />
+      </div>
+
+      {/* 06 — COMPARISON -------------------------------------------------- */}
+      {/* Hue: mint on the Lynceus column head only. The heading marks its key
+          word by weight of tone, not by colour — azure is reserved for action. */}
+      <section className="section bg-canvas">
+        <div className="container-narrow">
+          <div className="scroll-animate mb-10 max-w-[56ch]">
+            <h2 className="display text-h2 text-muted">
+              Two ways to run the <span className="text-ink">same</span> search.
             </h2>
-            <p className="scroll-animate scroll-fade-up scroll-stagger-1 mt-4 text-lg text-[#4a4e69] sm:text-xl max-w-2xl mx-auto">
-              Join thousands of satisfied professionals who found their dream jobs through our platform.
-            </p>
+            <p className="text-lead mt-6 text-muted">The difference is who does the reading.</p>
           </div>
 
-          {/* Marquee Reviews */}
-          <div className="relative flex w-full flex-col items-center justify-center overflow-hidden">
-            <Marquee pauseOnHover className="[--duration:30s]">
-              {[
-                {
-                  name: 'Sarah Mitchell',
-                  username: '@sarahm',
-                  body: "JobsGPT completely transformed my job search. Within two weeks, I landed interviews at three top tech companies!",
-                  img: 'https://avatar.vercel.sh/sarah',
-                },
-                {
-                  name: 'James Chen',
-                  username: '@jameschen',
-                  body: "The automated job discovery saved me hours every day. I found my dream role in just 3 weeks.",
-                  img: 'https://avatar.vercel.sh/james',
-                },
-                {
-                  name: 'Emily Parker',
-                  username: '@emilyp',
-                  body: "As a career changer, JobsGPT understood my transferable skills and matched me perfectly.",
-                  img: 'https://avatar.vercel.sh/emily',
-                },
-                {
-                  name: 'Michael Torres',
-                  username: '@mtorres',
-                  body: "The AI matching is incredibly accurate. Every job recommendation was spot-on for my experience.",
-                  img: 'https://avatar.vercel.sh/michael',
-                },
-                {
-                  name: 'Lisa Wang',
-                  username: '@lisawang',
-                  body: "I was skeptical at first, but the platform delivered beyond expectations. Highly recommend!",
-                  img: 'https://avatar.vercel.sh/lisa',
-                },
-                {
-                  name: 'David Kim',
-                  username: '@davidkim',
-                  body: "Finally a job platform that actually understands what I'm looking for. Game changer!",
-                  img: 'https://avatar.vercel.sh/david',
-                },
-              ].map((review) => (
-                <figure
-                  key={review.username}
-                  className={cn(
-                    'relative w-72 cursor-pointer overflow-hidden rounded-2xl border p-5 mx-2',
-                    'border-[#b8c5d6]/30 bg-white/80 backdrop-blur-sm hover:bg-white hover:shadow-xl',
-                    'transition-all duration-300 hover:-translate-y-1'
-                  )}
-                >
-                  <div className="flex flex-row items-center gap-3">
-                    <img className="rounded-full" width="40" height="40" alt="" src={review.img} />
-                    <div className="flex flex-col">
-                      <figcaption className="text-sm font-semibold text-[#22223b]">
-                        {review.name}
-                      </figcaption>
-                      <p className="text-xs font-medium text-[#5b6fa3]">{review.username}</p>
-                    </div>
-                  </div>
-                  <blockquote className="mt-3 text-sm text-[#4a4e69] leading-relaxed">{review.body}</blockquote>
-                  <div className="flex gap-0.5 mt-3">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-[#b8c5d6] text-[#b8c5d6]" />
-                    ))}
-                  </div>
-                </figure>
-              ))}
-            </Marquee>
-
-            <Marquee reverse pauseOnHover className="[--duration:30s] mt-4">
-              {[
-                {
-                  name: 'Alex Johnson',
-                  username: '@alexj',
-                  body: "The real-time alerts are a game changer. I was always first to apply to new positions.",
-                  img: 'https://avatar.vercel.sh/alex',
-                },
-                {
-                  name: 'Rachel Green',
-                  username: '@rachelg',
-                  body: "Switched from LinkedIn to JobsGPT and never looked back. So much more efficient!",
-                  img: 'https://avatar.vercel.sh/rachel',
-                },
-                {
-                  name: 'Chris Martinez',
-                  username: '@chrism',
-                  body: "Found my perfect remote job within a month. The filtering options are fantastic.",
-                  img: 'https://avatar.vercel.sh/chris',
-                },
-                {
-                  name: 'Amanda Foster',
-                  username: '@amandaf',
-                  body: "The resume analysis feature helped me understand what employers are looking for.",
-                  img: 'https://avatar.vercel.sh/amanda',
-                },
-                {
-                  name: 'Ryan Brooks',
-                  username: '@ryanb',
-                  body: "Best investment in my career. Landed a 40% salary increase at my new company.",
-                  img: 'https://avatar.vercel.sh/ryan',
-                },
-                {
-                  name: 'Sophie Lee',
-                  username: '@sophiel',
-                  body: "The platform is so intuitive. Set it up in 5 minutes and started getting matches immediately.",
-                  img: 'https://avatar.vercel.sh/sophie',
-                },
-              ].map((review) => (
-                <figure
-                  key={review.username}
-                  className={cn(
-                    'relative w-72 cursor-pointer overflow-hidden rounded-2xl border p-5 mx-2',
-                    'border-[#b8c5d6]/30 bg-white/80 backdrop-blur-sm hover:bg-white hover:shadow-xl',
-                    'transition-all duration-300 hover:-translate-y-1'
-                  )}
-                >
-                  <div className="flex flex-row items-center gap-3">
-                    <img className="rounded-full" width="40" height="40" alt="" src={review.img} />
-                    <div className="flex flex-col">
-                      <figcaption className="text-sm font-semibold text-[#22223b]">
-                        {review.name}
-                      </figcaption>
-                      <p className="text-xs font-medium text-[#5b6fa3]">{review.username}</p>
-                    </div>
-                  </div>
-                  <blockquote className="mt-3 text-sm text-[#4a4e69] leading-relaxed">{review.body}</blockquote>
-                  <div className="flex gap-0.5 mt-3">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="h-4 w-4 fill-[#b8c5d6] text-[#b8c5d6]" />
-                    ))}
-                  </div>
-                </figure>
-              ))}
-            </Marquee>
-
-            {/* Gradient overlays */}
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-1/4 bg-gradient-to-r from-[#e8eef5]"></div>
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-1/4 bg-gradient-to-l from-[#e8eef5]"></div>
+          <div className="panel scroll-animate scroll-stagger-1 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="matrix min-w-[640px]">
+                <thead>
+                  <tr>
+                    <th scope="col">
+                      <span className="sr-only">Capability</span>
+                    </th>
+                    <th scope="col">DOING IT YOURSELF</th>
+                    <th scope="col" className="bg-mint-dim text-mint">
+                      WITH LYNCEUS
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {COMPARISON_ROWS.map((row) => (
+                    <tr key={row.label}>
+                      <th scope="row" className="text-body font-medium text-ink">
+                        {row.label}
+                      </th>
+                      <td className="text-body text-dim">
+                        <span className="font-mono mr-2 text-dim" aria-hidden="true">
+                          —
+                        </span>
+                        {row.manual}
+                      </td>
+                      <td className="text-body text-ink">{row.lynceus}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* FAQ Section */}
-      <section className="py-20 bg-[#e8eef5] lg:py-28 relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#e8eef5] via-white/50 to-[#e8eef5] z-0" />
-        <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <div className="scroll-animate scroll-fade-up inline-flex items-center gap-2 px-4 py-2 mb-6 bg-[#b8c5d6]/20 rounded-full text-sm font-medium text-[#4a4e69]">
-              <HelpCircle className="h-4 w-4" />
-              <span>Have Questions?</span>
+      {/* 07 — NUMBERS BAND ------------------------------------------------ */}
+      {/* Each figure carries a meter: matched → mint, scanning → amber, coverage
+          neutral. The bars declare their width rather than sweeping to it — this
+          band sits five viewports down, and a load-triggered CSS animation has
+          finished long before anyone arrives, while the counters beside them are
+          in-view gated. A bar at full width under a figure still counting up is
+          worse than no animation at all. */}
+      <section className="section section--tight band bg-surface">
+        <div className="container-content">
+          <div className="grid grid-cols-2 md:grid-cols-4">
+            <div className="px-6">
+              <p className={FIGURE}>
+                <AnimatedCounter end={10000} suffix="+" />
+              </p>
+              <span className="meter mt-4 block w-full">
+                <span
+                  aria-hidden="true"
+                  className={`meter__fill block ${STAT_METERS[0].fill}`}
+                  style={{ width: STAT_METERS[0].width }}
+                />
+              </span>
+              {/* The dot is hardcoded mint and mint is the matched state, so it
+                  belongs under this figure and nowhere else in the band. */}
+              <p className="eyebrow status mt-4 text-dim">
+                <span className="status__dot" aria-hidden="true" />
+                JOBS MATCHED
+              </p>
             </div>
-            <h2 className="scroll-animate scroll-fade-up text-3xl font-extrabold text-[#22223b] sm:text-4xl lg:text-5xl">
-              Frequently Asked Questions
-            </h2>
-            <p className="scroll-animate scroll-fade-up scroll-stagger-1 mt-4 text-lg text-[#4a4e69] sm:text-xl">
-              Everything you need to know about JobsGPT.
-            </p>
+            <div className="border-l border-line px-6">
+              <p className={FIGURE}>
+                <AnimatedCounter end={500} suffix="+" />
+              </p>
+              <span className="meter mt-4 block w-full">
+                <span
+                  aria-hidden="true"
+                  className={`meter__fill block ${STAT_METERS[1].fill}`}
+                  style={{ width: STAT_METERS[1].width }}
+                />
+              </span>
+              <p className="eyebrow mt-4 text-dim">COMPANIES COVERED</p>
+            </div>
+            <div className="mt-6 px-6 md:mt-0 md:border-l md:border-line">
+              <p className={FIGURE}>
+                <AnimatedCounter end={95} suffix="%" />
+              </p>
+              <span className="meter mt-4 block w-full">
+                <span
+                  aria-hidden="true"
+                  className={`meter__fill block ${STAT_METERS[2].fill}`}
+                  style={{ width: STAT_METERS[2].width }}
+                />
+              </span>
+              <p className="eyebrow mt-4 text-dim">MATCH SATISFACTION</p>
+            </div>
+            <div className="mt-6 border-l border-line px-6 md:mt-0">
+              <p className={FIGURE}>24/7</p>
+              <span className="meter mt-4 block w-full">
+                <span
+                  aria-hidden="true"
+                  className={`meter__fill block ${STAT_METERS[3].fill}`}
+                  style={{ width: STAT_METERS[3].width }}
+                />
+              </span>
+              <p className="eyebrow mt-4 text-dim">ALWAYS SCANNING</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 08 — PRICING ----------------------------------------------------- */}
+      {/* Hues: azure (the chosen action) + violet (the AI-drafted credit line). */}
+      <section id="pricing" className="section bg-canvas">
+        <div className="container-content">
+          <div className="scroll-animate mb-10 max-w-[56ch]">
+            <p className="eyebrow">PRICING</p>
+            <h2 className="display text-h2 mt-4 text-ink">Credits, not a subscription.</h2>
+            <p className="text-lead mt-6 text-muted">Buy a block, spend as you go.</p>
           </div>
 
-          <div className="scroll-animate scroll-fade-up scroll-stagger-2 space-y-4">
-            {[
-              {
-                question: "How do credits work?",
-                answer: "Credits are our flexible payment system. You purchase credit packs and use them for different actions: 1 credit for job searches, 2 credits for AI-generated emails, and 3 credits for company intel reports. Credits never expire, so you can use them at your own pace."
-              },
-              {
-                question: "What information do you provide about jobs?",
-                answer: "We provide comprehensive job intel including the job posting details, who posted it, who's managing the hiring process, direct contact information for recruiters and hiring managers, and when available, CEO and leadership contact information. This gives you a direct line to decision-makers."
-              },
-              {
-                question: "How does the AI email generator work?",
-                answer: "Our AI analyzes the job posting, company information, and your resume to craft personalized outreach emails. Each email is tailored to highlight your relevant experience and express genuine interest in the specific role. You can edit and customize before sending."
-              },
-              {
-                question: "Can I get a refund on unused credits?",
-                answer: "Yes! If you're not satisfied with our platform within the first 14 days, we offer a full refund on any unused credits. After that period, credits are non-refundable but they never expire, so you can always use them later."
-              },
-              {
-                question: "How accurate is the job matching?",
-                answer: "Our AI-powered matching algorithm has a 95%+ accuracy rate based on user feedback. It analyzes your skills, experience, preferences, and career goals to find jobs that are genuinely relevant to you, saving you hours of manual searching."
-              },
-              {
-                question: "Do credits expire?",
-                answer: "No, your credits never expire. Once purchased, they're yours to use whenever you need them. Whether you're actively job hunting or just keeping an eye on the market, your credits will be there when you need them."
-              },
-              {
-                question: "How do you find recruiter and CEO contact information?",
-                answer: "We use a combination of public data sources, professional networks, and our proprietary database to compile accurate contact information. Our data is regularly verified and updated to ensure you're reaching the right people."
-              },
-              {
-                question: "Is my data secure?",
-                answer: "Absolutely. We use bank-level encryption to protect your personal information and resume data. We never share your information with third parties without your explicit consent. Your job search remains private and confidential."
-              }
-            ].map((faq, index) => (
-              <details
-                key={index}
-                className="group bg-white rounded-2xl shadow-md border border-[#b8c5d6]/20 overflow-hidden hover:shadow-lg transition-all duration-300"
+          <div className="grid gap-6 md:grid-cols-3">
+            {PLANS.map((plan, i) => (
+              <article
+                key={plan.name}
+                className={`panel scroll-animate scroll-stagger-${
+                  i + 1
+                } flex flex-col overflow-hidden ${
+                  plan.marked ? "border-azure-line" : "panel--hover"
+                }`}
               >
-                <summary className="flex items-center justify-between p-6 cursor-pointer list-none">
-                  <span className="font-semibold text-[#22223b] text-lg pr-4">{faq.question}</span>
-                  <ChevronDown className="h-5 w-5 text-[#5b6fa3] flex-shrink-0 transition-transform duration-300 group-open:rotate-180" />
-                </summary>
-                <div className="px-6 pb-6 pt-0">
-                  <p className="text-[#4a4e69] leading-relaxed">{faq.answer}</p>
+                {/* Tier identity + price read as a panel header bar, not as
+                    stacked editorial lines. The min-height is what keeps the
+                    three headers identical: .chip inherits body's 1.5 line-height
+                    and so stands 26.5px against the bare h3's 20.8px, which made
+                    Pro's header 5.7px taller than its neighbours'. The grid
+                    stretches all three panels to the tallest, and that surplus
+                    landed in the CTA spacer below — a visibly larger gap in the
+                    two unmarked tiers. Fix the header, not the spacer. */}
+                <div className="panel__header min-h-[52px]">
+                  <span className="flex min-w-0 items-center gap-4">
+                    {/* The chip's own azure-dim fill on panel-2 composites to
+                        4.16:1 behind 11px mono — under the AA floor. Bare panel-2
+                        measures 5.07:1, so the fill goes and the azure border and
+                        text carry the mark. */}
+                    {plan.marked ? (
+                      <span className="chip chip--action bg-transparent">MOST CHOSEN</span>
+                    ) : null}
+                    <h3 className="display text-h3 normal-case text-ink">{plan.name}</h3>
+                  </span>
+                  <p className="tabular text-h3 font-semibold leading-[1.04] tracking-[var(--track-h2)] text-ink">
+                    {plan.price}
+                  </p>
                 </div>
-              </details>
+
+                <div className="panel__body flex flex-1 flex-col">
+                  <p className="text-body-sm text-muted">{plan.note}</p>
+                  <p className="eyebrow tabular mt-2 text-dim">{plan.credits}</p>
+
+                  <ul className="mt-6 space-y-2">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="text-body flex gap-2 text-muted">
+                        <span className="font-mono text-dim" aria-hidden="true">
+                          ·
+                        </span>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {/* One marker per tier, not three. The border and the chip
+                      already say which tier is chosen; a solid azure fill on top
+                      of them is the loudest mark in the section and stops the
+                      emphasis reading as emphasis. All three CTAs match. */}
+                  <div className="mt-6 flex flex-1 items-end">
+                    <Link href="/auth/register" className="cta cta--secondary w-full justify-center">
+                      Start free
+                    </Link>
+                  </div>
+                </div>
+              </article>
             ))}
           </div>
 
-          <div className="scroll-animate scroll-fade-up scroll-stagger-3 text-center mt-12">
-            <p className="text-[#4a4e69] mb-4">Still have questions?</p>
-            <Link
-              href="mailto:support@jobsgpt.com"
-              className="inline-flex items-center gap-2 text-[#4a4e69] font-semibold hover:text-[#22223b] transition-colors"
-            >
-              <Mail className="h-5 w-5" />
-              Contact our support team
-            </Link>
+          <div className="panel mt-6 grid overflow-hidden md:grid-cols-3">
+            {LEDGER.map((entry, i) => (
+              <p
+                key={entry}
+                className={`font-mono tabular text-eyebrow tracking-[0.08em] px-6 py-4 uppercase ${
+                  LEDGER_HUE[i]
+                } ${i > 0 ? "border-t border-line md:border-t-0 md:border-l" : ""}`}
+              >
+                {entry}
+              </p>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="relative bg-[#22223b] overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.1),transparent_50%)]" />
-        <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute top-0 left-0 w-full h-full">
-            <div className="absolute top-20 left-20 w-64 h-64 bg-white/10 rounded-full blur-3xl" data-parallax="0.4"></div>
-            <div className="absolute bottom-20 right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl" data-parallax="0.3"></div>
+      {/* 09 — QUOTES ------------------------------------------------------ */}
+      {/* Hue: mint on the outcome fragment of each attribution — the only part
+          of the line that reports a result. */}
+      <section className="section section--tight band bg-surface">
+        <div className="container-content">
+          {/* Eyebrow + h2, the same two parts FAQ carries. No lead: the page is
+              already over its reading-copy budget, and a label is not prose. */}
+          <div className="scroll-animate mb-10">
+            <p className="eyebrow">TESTIMONIALS</p>
+            <h2 className="display text-h2 mt-4 text-ink">What people told us.</h2>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3">
+            {QUOTES.map((item, i) => {
+              /* Split at the final separator: everything after it is the outcome. */
+              const outcomeAt = item.attribution.lastIndexOf(" · ") + 3;
+              return (
+                <figure
+                  key={item.attribution}
+                  className={`panel scroll-animate scroll-stagger-${
+                    i + 1
+                  } flex flex-col overflow-hidden`}
+                >
+                  <div className="panel__body flex-1">
+                    <blockquote className="text-lead text-ink">{item.quote}</blockquote>
+                  </div>
+                  {/* A real full-bleed footer bar on a panel body, rather than a
+                      padded box clawing its own padding back with negative
+                      margins. Mint already lives in this line, so the status dot
+                      costs no hue and gives the card its control-room tell. */}
+                  <figcaption className="eyebrow border-t border-line bg-panel-2 px-6 py-4 text-dim">
+                    {item.attribution.slice(0, outcomeAt)}
+                    <span className="status text-mint">
+                      <span className="status__dot" aria-hidden="true" />
+                      {item.attribution.slice(outcomeAt)}
+                    </span>
+                  </figcaption>
+                </figure>
+              );
+            })}
           </div>
         </div>
-        <div className="relative max-w-2xl mx-auto text-center py-20 px-4 sm:py-24 sm:px-6 lg:px-8">
-          <h2 className="scroll-animate scroll-blur text-3xl font-extrabold text-white sm:text-4xl lg:text-5xl">
-            <span className="block text-reveal">Ready to dive in?</span>
-            <span className="block mt-2 text-reveal">Start your free trial today.</span>
+      </section>
+
+      {/* 10 — FAQ --------------------------------------------------------- */}
+      {/* Hue: azure on the open marker — the control you just acted on. */}
+      <section id="faq" className="section bg-canvas">
+        <div className="container-prose">
+          <div className="scroll-animate mb-10">
+            <p className="eyebrow">FAQ</p>
+            <h2 className="display text-h2 mt-4 text-ink">Questions we get.</h2>
+          </div>
+
+          <div className="scroll-animate scroll-stagger-1">
+            {FAQS.map((faq) => (
+              <div key={faq.question}>
+                <hr className="rule" />
+                <details className="group py-6">
+                  <summary className="flex cursor-pointer list-none items-start justify-between gap-6 [&::-webkit-details-marker]:hidden">
+                    <span className="text-lead text-ink">{faq.question}</span>
+                    <span
+                      aria-hidden="true"
+                      className="font-mono text-lead shrink-0 leading-none text-dim group-open:text-azure"
+                    >
+                      <span className="group-open:hidden">+</span>
+                      <span className="hidden group-open:inline">−</span>
+                    </span>
+                  </summary>
+                  <p className="text-body mt-4 max-w-[64ch] text-muted">{faq.answer}</p>
+                </details>
+              </div>
+            ))}
+            <hr className="rule" />
+          </div>
+
+          <p className="eyebrow mt-10">ANYTHING ELSE</p>
+          <a href="mailto:support@lynceus.com" className="cta cta--ghost mt-2">
+            support@lynceus.com
+          </a>
+        </div>
+      </section>
+
+      {/* 11 — CLOSING CTA ------------------------------------------------- */}
+      {/* Hue: azure on the primary CTA only. The footer supplies the closing
+          rule, so this band carries a top rule alone. Tight padding, not the
+          full --section-pad: four short lines is ~197px of content, and 200px
+          of air around it made the band half empty against a page that runs
+          0.35–0.44 padding-to-content everywhere else. */}
+      <section className="section section--tight border-t border-line bg-surface">
+        <div className="container-narrow text-center">
+          <h2 className="display text-h2 scroll-animate text-muted">
+            Your next role is <span className="text-ink">already</span> posted.
           </h2>
-          <p className="scroll-animate scroll-slide-up scroll-stagger-1 mt-6 text-lg leading-7 text-[#e8eef5] sm:text-xl">
-            Join thousands of job seekers who have found their next role faster and easier with our platform.
+          <p className="text-lead scroll-animate scroll-stagger-1 mx-auto mt-6 max-w-[52ch] text-muted">
+            No card, no call.
           </p>
-          <div className="scroll-animate scroll-scale scroll-stagger-2 mt-10">
-            <Link
-              href="/auth/register"
-              className="magnetic inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-semibold rounded-xl text-[#4a4e69] bg-white hover:bg-[#e8eef5] shadow-xl hover:shadow-2xl hover:scale-110 sm:w-auto transition-all duration-300"
-            >
-              Sign up for free
-              <ArrowRight className="ml-2 h-5 w-5" />
+          <div className="scroll-animate scroll-stagger-2 mt-6">
+            <Link href="/auth/register" className="cta cta--primary">
+              Start free
+              <span className="font-mono" aria-hidden="true">
+                →
+              </span>
             </Link>
           </div>
+          <p className="postscript mt-6">FIRST 10 CREDITS ARE ON US</p>
         </div>
       </section>
 

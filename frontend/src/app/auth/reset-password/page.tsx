@@ -1,10 +1,27 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Lock, Eye, EyeOff, ArrowRight, CheckCircle, XCircle } from "lucide-react";
+import { Lock, Eye, EyeOff } from "lucide-react";
 import { api } from "@/lib/api";
+
+/* Single-column auth shell — wordmark, then one panel. Same surface ladder as
+   the landing page: canvas behind, panel in front, hairlines instead of shadow. */
+function AuthShell({ children }: { children: React.ReactNode }) {
+    return (
+        <main className="flex min-h-screen items-center justify-center bg-canvas py-10">
+            <div className="container-prose">
+                <div className="mx-auto w-full max-w-[440px]">
+                    <Link href="/" className="display text-h3 inline-block text-ink">
+                        Lynceus
+                    </Link>
+                    <div className="mt-6">{children}</div>
+                </div>
+            </div>
+        </main>
+    );
+}
 
 function ResetPasswordForm() {
     const router = useRouter();
@@ -19,15 +36,9 @@ function ResetPasswordForm() {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
 
-    useEffect(() => {
-        if (!token) {
-            setError("Invalid reset link. Please request a new password reset.");
-        }
-    }, [token]);
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        
+
         if (!token) {
             setError("Invalid reset link");
             return;
@@ -38,8 +49,8 @@ function ResetPasswordForm() {
             return;
         }
 
-        if (password.length < 6) {
-            setError("Password must be at least 6 characters");
+        if (password.length < 8) {
+            setError("Password must be at least 8 characters");
             return;
         }
 
@@ -60,130 +71,151 @@ function ResetPasswordForm() {
         setLoading(false);
     };
 
+    /* Hue: mint reports the completed reset. The only other tinted thing on the
+       screen is nothing — the exit link reads ghost. */
     if (success) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#e8eef5] p-6">
-                <div className="w-full max-w-md">
-                    <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-10 border border-[#c9ada7]/20 text-center">
-                        <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <CheckCircle className="h-8 w-8 text-green-600" />
+            <AuthShell>
+                <div className="panel overflow-hidden">
+                    <div className="panel__header">
+                        <span>PASSWORD RESET</span>
+                        <span className="chip chip--live">COMPLETE</span>
+                    </div>
+
+                    <div className="panel__body">
+                        <h1 className="display text-h3 text-ink">Password reset</h1>
+
+                        <div className="alert alert--ok mt-4" role="status">
+                            <span>
+                                Your password has been successfully reset. Redirecting to login...
+                            </span>
                         </div>
-                        <h2 className="text-2xl font-bold text-[#22223b] mb-2">Password Reset!</h2>
-                        <p className="text-[#4a4e69] mb-6">
-                            Your password has been successfully reset. Redirecting to login...
-                        </p>
-                        <Link
-                            href="/auth/login"
-                            className="inline-flex items-center gap-2 text-[#4a4e69] hover:text-[#22223b] font-medium"
-                        >
-                            Go to Login
-                            <ArrowRight className="h-4 w-4" />
+                    </div>
+
+                    <div className="border-t border-line bg-panel-2 px-6 py-4">
+                        <Link href="/auth/login" className="cta cta--ghost">
+                            Go to login
+                            <span className="font-mono" aria-hidden="true">
+                                →
+                            </span>
                         </Link>
                     </div>
                 </div>
-            </div>
+            </AuthShell>
         );
     }
 
     if (!token) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-[#e8eef5] p-6">
-                <div className="w-full max-w-md">
-                    <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-10 border border-[#c9ada7]/20 text-center">
-                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                            <XCircle className="h-8 w-8 text-red-600" />
+            <AuthShell>
+                <div className="panel overflow-hidden">
+                    <div className="panel__header">
+                        <span>PASSWORD RESET</span>
+                    </div>
+
+                    <div className="panel__body">
+                        <h1 className="display text-h3 text-ink">Invalid link</h1>
+
+                        <div className="alert alert--error mt-4" role="alert">
+                            <span>This password reset link is invalid or has expired.</span>
                         </div>
-                        <h2 className="text-2xl font-bold text-[#22223b] mb-2">Invalid Link</h2>
-                        <p className="text-[#4a4e69] mb-6">
-                            This password reset link is invalid or has expired.
-                        </p>
-                        <Link
-                            href="/auth/forgot-password"
-                            className="inline-flex items-center gap-2 bg-[#22223b] text-white px-6 py-3 rounded-xl font-semibold hover:bg-[#2d3047] transition-all"
-                        >
-                            Request New Link
-                            <ArrowRight className="h-4 w-4" />
-                        </Link>
+
+                        <div className="mt-6">
+                            <Link href="/auth/forgot-password" className="cta cta--secondary">
+                                Request new link
+                            </Link>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </AuthShell>
         );
     }
 
+    /* Hue: azure only — the submit is the single action on the screen. */
     return (
-        <div className="min-h-screen flex items-center justify-center bg-[#e8eef5] p-6">
-            <div className="w-full max-w-md">
-                <div className="lg:hidden flex justify-center mb-8">
-                    <Link href="/">
-                        <img 
-                            src="/logo.png" 
-                            alt="JobsGPT" 
-                            className="h-32 w-auto object-contain"
-                        />
-                    </Link>
+        <AuthShell>
+            <div className="panel overflow-hidden">
+                <div className="panel__header">
+                    <span>PASSWORD RESET</span>
                 </div>
 
-                <div className="bg-white rounded-3xl shadow-xl p-8 sm:p-10 border border-[#c9ada7]/20">
-                    <div className="text-center mb-8">
-                        <h2 className="text-2xl sm:text-3xl font-bold text-[#22223b]">
-                            Reset Password
-                        </h2>
-                        <p className="mt-2 text-[#4a4e69]">
-                            Enter your new password below
-                        </p>
-                    </div>
+                <div className="panel__body">
+                    <h1 className="display text-h3 text-ink">Set a new password</h1>
+                    <p className="text-body-sm mt-2 text-muted">At least 6 characters.</p>
 
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                        <div>
-                            <label className="block text-sm font-medium text-[#22223b] mb-2">
-                                New Password
+                    <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                        <div className="field">
+                            <label htmlFor="password" className="label">
+                                New password
                             </label>
                             <div className="relative">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9a8c98]" />
+                                <Lock
+                                    aria-hidden="true"
+                                    strokeWidth={1.5}
+                                    className="field__affix field__affix--left h-4 w-4"
+                                />
                                 <input
+                                    id="password"
                                     type={showPassword ? "text" : "password"}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Enter new password"
-                                    className="w-full pl-12 pr-12 py-3 rounded-xl border border-[#c9ada7]/50 focus:border-[#4a4e69] focus:ring-2 focus:ring-[#4a4e69]/20 outline-none transition-all text-[#22223b] placeholder:text-[#9a8c98]"
+                                    className="input input--has-icon input--has-action"
                                     required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9a8c98] hover:text-[#4a4e69] transition-colors"
+                                    className="field__affix field__affix--action"
+                                    aria-label={showPassword ? "Hide password" : "Show password"}
                                 >
-                                    {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    {showPassword ? (
+                                        <EyeOff strokeWidth={1.5} className="h-4 w-4" />
+                                    ) : (
+                                        <Eye strokeWidth={1.5} className="h-4 w-4" />
+                                    )}
                                 </button>
                             </div>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-[#22223b] mb-2">
-                                Confirm Password
+                        <div className="field">
+                            <label htmlFor="confirmPassword" className="label">
+                                Confirm password
                             </label>
                             <div className="relative">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#9a8c98]" />
+                                <Lock
+                                    aria-hidden="true"
+                                    strokeWidth={1.5}
+                                    className="field__affix field__affix--left h-4 w-4"
+                                />
                                 <input
+                                    id="confirmPassword"
                                     type={showConfirmPassword ? "text" : "password"}
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
                                     placeholder="Confirm new password"
-                                    className="w-full pl-12 pr-12 py-3 rounded-xl border border-[#c9ada7]/50 focus:border-[#4a4e69] focus:ring-2 focus:ring-[#4a4e69]/20 outline-none transition-all text-[#22223b] placeholder:text-[#9a8c98]"
+                                    className="input input--has-icon input--has-action"
                                     required
                                 />
                                 <button
                                     type="button"
                                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[#9a8c98] hover:text-[#4a4e69] transition-colors"
+                                    className="field__affix field__affix--action"
+                                    aria-label={
+                                        showConfirmPassword ? "Hide password" : "Show password"
+                                    }
                                 >
-                                    {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    {showConfirmPassword ? (
+                                        <EyeOff strokeWidth={1.5} className="h-4 w-4" />
+                                    ) : (
+                                        <Eye strokeWidth={1.5} className="h-4 w-4" />
+                                    )}
                                 </button>
                             </div>
                         </div>
 
                         {error && (
-                            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                            <div className="alert alert--error" role="alert">
                                 {error}
                             </div>
                         )}
@@ -191,37 +223,33 @@ function ResetPasswordForm() {
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full bg-[#22223b] text-white py-3.5 rounded-xl font-semibold hover:bg-[#2d3047] transition-all duration-300 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl disabled:opacity-50"
+                            className="btn btn--primary btn--block"
                         >
                             {loading ? (
-                                <span className="flex items-center gap-2">
-                                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                    </svg>
-                                    Resetting...
-                                </span>
-                            ) : (
                                 <>
-                                    Reset Password
-                                    <ArrowRight className="h-5 w-5" />
+                                    <span className="spinner" aria-hidden="true" />
+                                    Resetting
                                 </>
+                            ) : (
+                                "Reset password"
                             )}
                         </button>
                     </form>
                 </div>
             </div>
-        </div>
+        </AuthShell>
     );
 }
 
 export default function ResetPasswordPage() {
     return (
-        <Suspense fallback={
-            <div className="min-h-screen flex items-center justify-center bg-[#e8eef5]">
-                <div className="animate-spin h-8 w-8 border-4 border-[#22223b] border-t-transparent rounded-full" />
-            </div>
-        }>
+        <Suspense
+            fallback={
+                <div className="flex min-h-screen items-center justify-center bg-canvas">
+                    <span className="spinner text-muted" aria-hidden="true" />
+                </div>
+            }
+        >
             <ResetPasswordForm />
         </Suspense>
     );
